@@ -1,0 +1,56 @@
+{
+  "description": "Cases every SDK's result helpers must pass. Each SDK's tests read this file. See docs/sdk-design.md, Helpers.",
+  "payment_intents": [
+    {
+      "name": "hosted checkout",
+      "intent": { "id": "pi_1", "object": "payment_intent", "status": "requires_action", "next_action": { "type": "redirect_to_url", "redirect_to_url": { "url": "https://checkout.example.test/pay/x", "return_url": null } } },
+      "expect": { "redirectUrl": "https://checkout.example.test/pay/x", "clientToken": null, "qrphData": null, "qrphExpiresAt": null, "isSucceeded": false }
+    },
+    {
+      "name": "embedded checkout",
+      "intent": { "id": "pi_2", "object": "payment_intent", "status": "requires_action", "next_action": { "type": "mount_embedded_checkout", "mount_embedded_checkout": { "client_token": "ct_abc", "expires_at": 1794214000 } } },
+      "expect": { "redirectUrl": null, "clientToken": "ct_abc", "qrphData": null, "qrphExpiresAt": null, "isSucceeded": false }
+    },
+    {
+      "name": "QR Ph",
+      "intent": { "id": "pi_3", "object": "payment_intent", "status": "requires_action", "next_action": { "type": "qrph_display_qr_code", "qrph_display_qr_code": { "data": "00020101021228760011ph.ppmi.p2m", "expires_at": 1794214000 } } },
+      "expect": { "redirectUrl": null, "clientToken": null, "qrphData": "00020101021228760011ph.ppmi.p2m", "qrphExpiresAt": 1794214000, "isSucceeded": false }
+    },
+    {
+      "name": "QR Ph without an expiry",
+      "intent": { "id": "pi_4", "object": "payment_intent", "status": "requires_action", "next_action": { "type": "qrph_display_qr_code", "qrph_display_qr_code": { "data": "qr", "expires_at": null } } },
+      "expect": { "redirectUrl": null, "clientToken": null, "qrphData": "qr", "qrphExpiresAt": null, "isSucceeded": false }
+    },
+    {
+      "name": "a next_action type the SDK does not know",
+      "intent": { "id": "pi_5", "object": "payment_intent", "status": "requires_action", "next_action": { "type": "something_new", "something_new": { "url": "x" } } },
+      "expect": { "redirectUrl": null, "clientToken": null, "qrphData": null, "qrphExpiresAt": null, "isSucceeded": false }
+    },
+    {
+      "name": "succeeded",
+      "intent": { "id": "pi_6", "object": "payment_intent", "status": "succeeded", "next_action": null },
+      "expect": { "redirectUrl": null, "clientToken": null, "qrphData": null, "qrphExpiresAt": null, "isSucceeded": true }
+    }
+  ],
+  "lists": [
+    { "page": { "object": "list", "data": [], "has_more": true, "next_cursor": "cur_2" }, "expect": { "hasMore": true, "nextCursor": "cur_2" } },
+    { "page": { "object": "list", "data": [], "has_more": false, "next_cursor": null }, "expect": { "hasMore": false, "nextCursor": null } }
+  ],
+  "events": [
+    { "event": { "id": "evt_1", "object": "event", "type": "payment_intent.succeeded", "data": { "object": { "id": "pi_6", "object": "payment_intent", "status": "succeeded" } } }, "expect": { "dataObjectId": "pi_6" } }
+  ],
+  "qrph_svg": {
+    "payload": "00020101021228760011ph.ppmi.p2m0111ABCDPHM1XXX03150000123456789010415ABCDEF1234567890503031520400005303608540425005802PH5913ACACIA STORE 6011MANDALUYONG62310010ph.ppmi.p2m0513REF01A1BF6674A6304ABCD",
+    "logo_modules": { "21": 7, "37": 9, "77": 19, "177": 43 },
+    "logo_bytes_base64": "iVBORwD/",
+    "logo_type": "image/png",
+    "expect_viewbox_size_margin_4": 85,
+    "bad_options": [
+      { "name": "negative margin", "options": { "margin": -1 } },
+      { "name": "fractional margin", "options": { "margin": 1.5 } },
+      { "name": "empty logo", "options": { "logo": "" } },
+      { "name": "logo without type", "options": { "logo": { "data_base64": "iVBORwD/" } } },
+      { "name": "logo with empty bytes", "options": { "logo": { "data_base64": "", "type": "image/png" } } }
+    ]
+  }
+}

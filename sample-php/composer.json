@@ -1,0 +1,27 @@
+{
+    "name": "domdanao/acacia-15-svc-sample-php",
+    "description": "A one-page site that charges ₱25 for Acacia 15 SVC by QR Ph on its own page, through the FinFactory API.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1",
+        "domdanao/finfactory-payments": "*@dev",
+        "chillerlan/php-qrcode": "^5"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../php"
+        }
+    ],
+    "scripts": {
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "php -S localhost:8000 -t public public/index.php"
+        ],
+        "serve:live": [
+            "Composer\\Config::disableProcessTimeout",
+            "ENV_FILE=.env.live php -S localhost:8000 -t public public/index.php"
+        ]
+    }
+}

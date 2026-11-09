@@ -1,0 +1,52 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sample-js",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "sample-js",
+        "start"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "sample-js-live",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "sample-js",
+        "run",
+        "start:live"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "sample-php",
+      "runtimeExecutable": "php",
+      "runtimeArgs": [
+        "-S",
+        "localhost:8000",
+        "-t",
+        "sample-php/public",
+        "sample-php/public/index.php"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "sample-php-live-tunnel",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "ENV_FILE=.env.live",
+        "php",
+        "-S",
+        "[::]:3000",
+        "-t",
+        "sample-php/public",
+        "sample-php/public/index.php"
+      ],
+      "port": 3000
+    }
+  ]
+}

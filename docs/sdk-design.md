@@ -19,12 +19,17 @@ The source of truth is the Merchant API's OpenAPI document, snapshotted in
 
 1. **No runtime dependencies** beyond the language's standard library, or the one HTTP extension
    everybody has (PHP's ext-curl). An SDK for payments is a supply-chain target: every dependency
-   is one more thing to audit.
+   is one more thing to audit. The one exception is drawing QR Ph codes, which needs a QR
+   encoder: it is optional, and nothing else loads it (see [QR Ph codes](#qr-ph-codes)).
 2. **Forward compatible.** The API adds fields, enum values, `next_action` types and event types
    inside `v1`. Never fail on an unknown field or value; expose unknown fields as they came.
 3. **Thin.** The SDK sends what you give it and returns what the API answers. No client-side
    validation of values the API validates (it answers `validation_failure` with `param`).
 4. **Safe by default.** Retries never risk doing a write twice.
+5. **The same features in every language.** Every SDK has every call, option, helper and error in
+   this document, with the same names in the language's own case. Where a language can't express
+   something the same way, the difference is listed here. Shared cases in
+   [`spec/conformance/`](../spec/conformance) run in every SDK's tests.
 
 ## Surface
 
@@ -136,6 +141,60 @@ endpoint refusals (OAuth), no answer (Connection, with a Timeout subclass), webh
 - Lists: `list()` returns one page (`data`, `has_more`, `next_cursor`); `all()` is a lazy
   iterator that follows `next_cursor` as `cursor` until `has_more` is false.
 
+## Helpers
+
+Small readers of what the API returns, so merchants needn't walk `next_action` themselves. Where
+results are objects with methods (PHP), they are methods; where results are plain data (JS),
+they are functions taking the result. Same names, same answers:
+
+| Helper | On | Answer |
+| --- | --- | --- |
+| `redirectUrl` | payment intent | `next_action.redirect_to_url.url`, else null |
+| `clientToken` | payment intent | `next_action.mount_embedded_checkout.client_token`, else null |
+| `qrphData` | payment intent | `next_action.qrph_display_qr_code.data`, else null |
+| `qrphExpiresAt` | payment intent | `next_action.qrph_display_qr_code.expires_at`, else null |
+| `isSucceeded` | payment intent | `status` is `succeeded` |
+| `hasMore`, `nextCursor` | list page | `has_more`, `next_cursor` |
+| `dataObject` | webhook event | `data.object`, typed by the event's `type` |
+
+Cases: [`spec/conformance/helpers.json`](../spec/conformance/helpers.json).
+
+## QR Ph codes
+
+`qrphSvg(intentOrPayload, options)` draws a QR Ph code as an SVG string: null for an intent not
+waiting for a QR Ph payment. PHP: `QrPh::svg(...)`, and `$intent->qrphSvg($options)`. JS: from
+the separate entry point `@domdanao/finfactory-payments/qrph`, so the main one never loads the
+encoder.
+
+- Encoder: an optional dependency (PHP `chillerlan/php-qrcode` 5, JS `qrcode-generator` 2),
+  byte mode, error correction level **H**.
+- Options: `logo` (a URL or `data:` URI used as the image's `href`, or `{data: bytes, type}`
+  embedded as a `data:` URI), `margin` in modules (default 4), `foreground` (`#000`),
+  `background` (`#fff`), `title` (`QR Ph code`). Attribute values are escaped.
+- With a logo: clear an odd square of `logoModules(n)` modules in the centre,
+  `max(7, round(n × 0.25))` made odd, and draw the logo one module inside it. The BSP asks that
+  merchant (P2M) codes carry the QR Ph logo in the centre. The SDKs don't ship the logo, which is
+  the BSP's mark.
+- Output: one `<path>` of dark-module runs on a background `<rect>`, `viewBox` in modules,
+  `shape-rendering="crispEdges"`, `role="img"` with the title.
+- Refuse an empty payload, a margin that isn't a whole number ≥ 0, and a malformed logo.
+
+Every SDK's tests decode what it draws, with and without a logo, at a real QR Ph length.
+
+## Language differences
+
+What one language has and another can't, or names differently. Nothing else may differ.
+
+| Feature | JS | PHP |
+| --- | --- | --- |
+| Live or test key | `finfactory.livemode` (getter) | `$finfactory->isLivemode()` |
+| Custom transport | `fetch` option | `http_client` option (an `HttpClient`) |
+| Cancelling a call | `signal` per-call option | none: PHP has no cancellation |
+| Refuse to run in a browser | yes, unless `dangerouslyAllowBrowser` | not applicable |
+| Shared token caches | the `TokenCache` interface | the interface, plus `ApcuTokenCache` and `Psr16TokenCache` for PHP's per-request processes |
+| Webhook raw body | string, `Uint8Array` or `ArrayBuffer` | string (PHP strings are bytes) |
+| Helpers | functions: `redirectUrl(intent)` | methods: `$intent->redirectUrl()` |
+
 ## Webhooks
 
 - Header: `Webhook-Signature: t=<unix>,v1=<hex>[,v1=<hex>...]`.
@@ -175,6 +234,8 @@ Against a fake transport, no network:
 13. Static token skips `/oauth/token`.
 14. Webhook conformance vector; tampered body, wrong secret, old timestamp, malformed header;
     rotation with two secrets.
+15. Every case in [`spec/conformance/helpers.json`](../spec/conformance/helpers.json).
+16. QR Ph codes decode back to their payload, with the centre cleared for a logo.
 
 ## Versioning the SDKs
 

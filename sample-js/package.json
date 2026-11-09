@@ -1,0 +1,17 @@
+{
+  "name": "acacia-15-svc-sample-js",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A one-page site that charges ₱15 for Acacia 15 SVC through FinFactory hosted checkout.",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs",
+    "start:live": "node --env-file=.env.live server.mjs"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "dependencies": {
+    "@domdanao/finfactory-payments": "file:../js"
+  }
+}

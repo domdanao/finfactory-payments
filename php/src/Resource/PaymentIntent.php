@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FinFactory\Payments\Resource;
 
 use FinFactory\Payments\ApiObject;
+use FinFactory\Payments\QrPh;
 
 /**
  * One payment to take, whatever the method.
@@ -54,6 +55,33 @@ class PaymentIntent extends ApiObject
         return $this->next_action?->type === self::NEXT_ACTION_MOUNT_EMBEDDED_CHECKOUT
             ? $this->next_action->mount_embedded_checkout?->client_token
             : null;
+    }
+
+    /** The QR payload to show, when next_action is qrph_display_qr_code. */
+    public function qrphData(): ?string
+    {
+        return $this->next_action?->type === self::NEXT_ACTION_QRPH_DISPLAY_QR_CODE
+            ? $this->next_action->qrph_display_qr_code?->data
+            : null;
+    }
+
+    /** When the QR code stops being payable (Unix timestamp), when next_action is qrph_display_qr_code. */
+    public function qrphExpiresAt(): ?int
+    {
+        return $this->next_action?->type === self::NEXT_ACTION_QRPH_DISPLAY_QR_CODE
+            ? $this->next_action->qrph_display_qr_code?->expires_at
+            : null;
+    }
+
+    /**
+     * The QR Ph code as an <svg> element, when next_action is qrph_display_qr_code; otherwise null.
+     * The same as QrPh::svg($intent, $options). Needs chillerlan/php-qrcode 5.
+     *
+     * @param array{logo?: string|array{data: string, type: string}, margin?: int, foreground?: string, background?: string, title?: string} $options
+     */
+    public function qrphSvg(array $options = []): ?string
+    {
+        return QrPh::svg($this, $options);
     }
 
     public function isSucceeded(): bool
