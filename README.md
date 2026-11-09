@@ -1,6 +1,9 @@
 # FinFactory Payments SDKs
 
-Official SDKs for the [FinFactory Payments Merchant API](https://docs.payments.finfactory.dev/merchant/guides/overview/).
+SDKs for the [FinFactory Payments Merchant API](https://docs.payments.finfactory.dev/merchant/guides/overview/).
+
+> **v0.1: early release.** Both SDKs cover the whole Merchant API v1 and are tested, but have not
+> yet been used in production. Method names and options may still change before 1.0.
 
 | Language | Package | Folder | Docs |
 | --- | --- | --- | --- |

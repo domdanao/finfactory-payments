@@ -1,7 +1,7 @@
 {
   "name": "@domdanao/finfactory-payments",
   "version": "0.1.0",
-  "description": "Official JavaScript and TypeScript SDK for the FinFactory Payments Merchant API: payment intents, refunds, disputes and webhooks. Zero dependencies; Node.js, Deno, Bun and Cloudflare Workers.",
+  "description": "JavaScript and TypeScript SDK for the FinFactory Payments Merchant API: payment intents, refunds, disputes and webhooks. Zero dependencies; Node.js, Deno, Bun and Cloudflare Workers.",
   "keywords": [
     "finfactory",
     "payments",

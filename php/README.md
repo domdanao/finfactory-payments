@@ -1,8 +1,12 @@
 # FinFactory Payments for PHP
 
-The official PHP SDK for the [FinFactory Payments Merchant API](https://docs.payments.finfactory.dev/merchant/guides/overview/).
+A PHP SDK for the [FinFactory Payments Merchant API](https://docs.payments.finfactory.dev/merchant/guides/overview/).
 Take payments by card, QR Ph and cash, through hosted checkout, embedded checkout or your own
 page; refund them, follow disputes, and verify webhooks.
+
+> **v0.1: early release.** It covers the whole Merchant API v1 and is tested, but it has not
+> yet been used in production. Method names and options may still change before 1.0; pin the
+> version and read the [changelog](CHANGELOG.md) when you upgrade.
 
 - **No Composer dependencies.** Only `ext-curl` and `ext-json`, which nearly every PHP install has.
 - **PHP 8.1 or later.** Works in Laravel, Symfony, WordPress/WooCommerce and plain PHP.

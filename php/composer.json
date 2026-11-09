@@ -1,6 +1,6 @@
 {
     "name": "domdanao/finfactory-payments",
-    "description": "Official PHP SDK for the FinFactory Payments Merchant API: payment intents, refunds, disputes and webhooks. No dependencies beyond ext-curl.",
+    "description": "PHP SDK for the FinFactory Payments Merchant API: payment intents, refunds, disputes and webhooks. No dependencies beyond ext-curl.",
     "type": "library",
     "keywords": ["finfactory", "payments", "qrph", "philippines", "checkout", "webhooks", "sdk"],
     "license": "MIT",

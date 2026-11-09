@@ -5,7 +5,7 @@ All notable changes to `domdanao/finfactory-payments` are recorded here. The pro
 
 ## 0.1.0 — unreleased
 
-First release, for Merchant API `v1`.
+First release, for Merchant API `v1`. An early release: the API of the SDK may change before 1.0.
 
 - Payment intents: create, retrieve, confirm, cancel, list, auto-paginate.
 - Payment methods: list, retrieve.
