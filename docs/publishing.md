@@ -1,0 +1,79 @@
+# Publishing
+
+How to release `@domdanao/finfactory-payments` to npm and `domdanao/finfactory-payments` to Packagist.
+
+## Before the first release: decisions and accounts
+
+| | npm | Packagist |
+| --- | --- | --- |
+| Name | `@domdanao/finfactory-payments` | `domdanao/finfactory-payments` |
+| Who owns the name | The `@domdanao` scope is the npm user `domdanao`: `npm login` as that user. Scoped packages are private by default; `publishConfig` already makes this one public. | The `domdanao` **vendor** is claimed by the first package submitted under it: submit while logged in to Packagist with the `domdanao` GitHub account. |
+| Account security | Turn on 2FA for every owner. Prefer **trusted publishing** from GitHub Actions (no long-lived token), or an automation token stored as `NPM_TOKEN`. | Log in with GitHub; let Packagist install its GitHub webhook so tags publish automatically. |
+| Source repository | Can be a subfolder of this repository. | **Must be the root of a Git repository.** Packagist reads `composer.json` from the repository root, so the `php/` folder is pushed to its own repository (see below). |
+
+Check, then fill in before publishing:
+
+- [x] The names above. (The PHP namespace stays `FinFactory\Payments`, named for the API.)
+- [x] The license: **MIT**.
+- [ ] Create the repositories the metadata points at: `github.com/domdanao/finfactory-payments`
+      and the PHP mirror `github.com/domdanao/finfactory-payments-php` (or change the URLs in
+      `js/package.json` and `php/composer.json`). npm provenance requires `repository` to match the
+      repository that publishes.
+- [ ] The default API host, `https://api.payments.finfactory.dev`. Platforms that run their own host pass
+      `baseUrl` / `base_url`.
+
+## Repository layout
+
+This repository holds both SDKs:
+
+```text
+js/      → npm: @domdanao/finfactory-payments
+php/     → mirrored to its own repository (e.g. github.com/domdanao/finfactory-payments-php) → Packagist
+spec/    → the OpenAPI snapshot both were built from
+docs/    → this file and the SDK design contract
+```
+
+The alternative is one repository per SDK from the start. It costs nothing at Packagist and keeps
+each SDK's issues and releases apart, at the price of keeping shared docs and the spec in sync by
+hand. Either works; the release workflow here assumes the monorepo plus a PHP mirror.
+
+## Releasing JavaScript
+
+1. Update `version` in `js/package.json` and `VERSION` in `js/src/client.ts`, and the changelog.
+2. Check what will be published:
+
+   ```sh
+   cd js && npm test && npm run typecheck && npm pack --dry-run
+   ```
+
+   The tarball holds only `dist/`, `README.md`, `CHANGELOG.md`, `LICENSE` and `package.json`.
+3. Commit, then tag and push: `git tag js-v0.1.0 && git push origin js-v0.1.0`.
+4. `.github/workflows/release.yml` tests and runs `npm publish --access public --provenance`.
+
+By hand instead: `cd js && npm publish --access public` (with 2FA).
+
+## Releasing PHP
+
+1. Update `VERSION` in `php/src/FinFactory.php`, and the changelog. (Composer takes the version
+   from the Git tag, not from `composer.json`.)
+2. Check:
+
+   ```sh
+   cd php && composer validate --strict && vendor/bin/phpunit
+   ```
+
+3. Commit, then tag and push: `git tag php-v0.1.0 && git push origin php-v0.1.0`.
+4. The release workflow pushes `php/` to the mirror repository (`vars.PHP_SPLIT_REPO`, with a
+   token in `secrets.PHP_SPLIT_TOKEN`) and tags it `v0.1.0`. Packagist sees the tag through its
+   webhook.
+
+First time only: create the mirror repository, run step 4 once, then submit its URL at
+<https://packagist.org/packages/submit>.
+
+`.gitattributes` keeps `tests/`, `examples/` and tooling out of the archive Composer downloads.
+
+## After a release
+
+- Install it in a clean project and run the quickstart example against a test key.
+- Watch the `spec-drift` CI job: it fails when the published OpenAPI document changes, which is
+  the signal to add the change to both SDKs.

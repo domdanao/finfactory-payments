@@ -1,0 +1,49 @@
+name: Release
+
+# Publishes a package when a tag is pushed: js-v0.1.0 publishes npm, php-v0.1.0 updates the PHP
+# split repository that Packagist reads. See docs/publishing.md.
+on:
+  push:
+    tags: ['js-v*', 'php-v*']
+
+jobs:
+  npm:
+    if: startsWith(github.ref_name, 'js-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance / trusted publishing
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Check the tag matches package.json
+        run: test "js-v$(node -p 'require("./package.json").version')" = "${GITHUB_REF_NAME}"
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  php-split:
+    if: startsWith(github.ref_name, 'php-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check the tag matches FinFactory::VERSION
+        run: grep -q "VERSION = '${GITHUB_REF_NAME#php-v}'" php/src/FinFactory.php
+      - name: Push php/ to the split repository, tagged
+        env:
+          SPLIT_REPO: ${{ vars.PHP_SPLIT_REPO }}          # e.g. domdanao/finfactory-payments-php
+          SPLIT_TOKEN: ${{ secrets.PHP_SPLIT_TOKEN }}     # a token that can push to it
+        run: |
+          git subtree split --prefix=php -b php-split
+          git push "https://x-access-token:${SPLIT_TOKEN}@github.com/${SPLIT_REPO}.git" php-split:main --force
+          git push "https://x-access-token:${SPLIT_TOKEN}@github.com/${SPLIT_REPO}.git" "php-split:refs/tags/v${GITHUB_REF_NAME#php-v}"

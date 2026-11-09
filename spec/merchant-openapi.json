@@ -1,0 +1,3456 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Merchant API",
+    "version": "v1",
+    "description": "One API for taking payments on every method and channel your account is set up for. Start with the [Overview](https://docs.payments.finfactory.dev/merchant/guides/overview/) and the [Quickstart](https://docs.payments.finfactory.dev/merchant/guides/quickstart/), then see [Authentication](https://docs.payments.finfactory.dev/merchant/guides/authentication/), [Test mode and test values](https://docs.payments.finfactory.dev/merchant/guides/test-mode/), [Testing your integration](https://docs.payments.finfactory.dev/merchant/guides/testing-your-integration/) and the API basics ([Errors](https://docs.payments.finfactory.dev/merchant/guides/errors/), [Idempotency](https://docs.payments.finfactory.dev/merchant/guides/idempotency/), [Pagination](https://docs.payments.finfactory.dev/merchant/guides/pagination/) and [Versioning](https://docs.payments.finfactory.dev/merchant/guides/versioning/)); everything here is `/v1`."
+  },
+  "servers": [
+    {
+      "url": "https://api.payments.finfactory.dev",
+      "description": "Your platform's API host"
+    }
+  ],
+  "security": [
+    {
+      "AccessToken": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Payment intents",
+      "description": "One payment to take, whatever the method; [Payment intents](https://docs.payments.finfactory.dev/merchant/guides/payment-intents/) explains its lifecycle and the three ways a customer pays."
+    },
+    {
+      "name": "Payment methods",
+      "description": "The methods your account can take payments with, one per method and channel, and whether each can take a payment now; [Payment intents](https://docs.payments.finfactory.dev/merchant/guides/payment-intents/) explains how a customer pays by one."
+    },
+    {
+      "name": "Test helpers",
+      "description": "Calls that stand in for what a customer does, in test mode only; [Testing your integration](https://docs.payments.finfactory.dev/merchant/guides/testing-your-integration/) explains every outcome."
+    },
+    {
+      "name": "Refunds",
+      "description": "Money returned to a customer from a payment that succeeded, in full or in part; [Refunds](https://docs.payments.finfactory.dev/merchant/guides/refunds/) explains which payments can be refunded and what a refund goes through."
+    },
+    {
+      "name": "Disputes",
+      "description": "A customer's challenge to one of your card payments, raised through their bank; [Disputes](https://docs.payments.finfactory.dev/merchant/guides/disputes/) explains what it costs, how it goes and how to respond."
+    },
+    {
+      "name": "Webhook endpoints",
+      "description": "HTTPS addresses we send events to as they happen; [Webhooks](https://docs.payments.finfactory.dev/merchant/guides/webhooks/) explains how to create one, verify a delivery and what happens when it fails."
+    },
+    {
+      "name": "Event types",
+      "description": "What each event we deliver carries, which [Webhooks](https://docs.payments.finfactory.dev/merchant/guides/webhooks/#event-types) lists with its object as of the event."
+    },
+    {
+      "name": "Access tokens",
+      "description": "Short-lived tokens your server exchanges its client credentials for; see [Authentication](https://docs.payments.finfactory.dev/merchant/guides/authentication/)."
+    }
+  ],
+  "paths": {
+    "/v1/payment_intents": {
+      "post": {
+        "tags": [
+          "Payment intents"
+        ],
+        "operationId": "createPaymentIntent",
+        "summary": "Create a payment intent",
+        "description": "Starts a payment of `amount` in `currency`. Name the method now in\n`payment_method_data[type]`, and the intent is `requires_confirmation` with its method and\nprice fixed. Leave it out, and the intent is `requires_action` with the methods it can be paid\nby in `payment_method_types`, and `next_action.redirect_to_url`: send your customer to its\n`url`, our hosted checkout page, or choose a method yourself when you confirm. Without a\nmethod, a `return_url` is where our hosted checkout page sends the customer back to, a\n`cancel_url` where it sends one who cancels, and a `customer_email` where it offers to send\nthe receipt.\n\nWith `checkout_mode` `embedded`, the intent is paid in embedded checkout, on your own page,\ninstead: its `next_action` is `mount_embedded_checkout`, with the client token your page\nmounts it with. A `return_url` is then where the customer is sent after paying by card, and a\n`cancel_url` is refused. See [Embedded checkout](https://docs.payments.finfactory.dev/merchant/guides/embedded-checkout/).\n\nWith `confirm: true`, the intent is created and confirmed in one call, and comes back\n`requires_action` with `next_action`. Name the method, and a `return_url` for a card.\n\n`payment_method`, the id of a saved payment method, is not supported yet and is refused with\n`validation_failure`.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "In the currency's minor unit, at most 18 digits.",
+                    "examples": [
+                      10000
+                    ]
+                  },
+                  "currency": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z]{3}$",
+                    "description": "A three-letter ISO 4217 code, in either case.",
+                    "examples": [
+                      "php"
+                    ]
+                  },
+                  "payment_method_data": {
+                    "$ref": "#/components/schemas/PaymentMethodData"
+                  },
+                  "payment_method_types": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The methods this intent may be paid by. Leave it out to allow any your account\ncan take. A method in `payment_method_data[type]` must be one of them.\n",
+                    "examples": [
+                      [
+                        "card",
+                        "qrph"
+                      ]
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "description": "Your own text, such as an order number. Never shown to the customer."
+                  },
+                  "metadata": {
+                    "$ref": "#/components/schemas/Metadata"
+                  },
+                  "confirm": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "`true` creates and confirms the intent in one call. `payment_method_data[type]` is\nthen required.\n"
+                  },
+                  "return_url": {
+                    "$ref": "#/components/schemas/ReturnUrl"
+                  },
+                  "cancel_url": {
+                    "$ref": "#/components/schemas/CancelUrl"
+                  },
+                  "customer_email": {
+                    "$ref": "#/components/schemas/CustomerEmail"
+                  },
+                  "checkout_mode": {
+                    "$ref": "#/components/schemas/CheckoutMode"
+                  },
+                  "risk_signals": {
+                    "$ref": "#/components/schemas/RiskSignals"
+                  }
+                }
+              },
+              "examples": {
+                "choose later": {
+                  "value": {
+                    "amount": 10000,
+                    "currency": "php",
+                    "description": "Order 1042",
+                    "return_url": "https://shop.example.com/orders/1042/paid",
+                    "cancel_url": "https://shop.example.com/cart",
+                    "customer_email": "maria@example.com"
+                  }
+                },
+                "embedded checkout": {
+                  "value": {
+                    "amount": 10000,
+                    "currency": "php",
+                    "description": "Order 1042",
+                    "checkout_mode": "embedded",
+                    "return_url": "https://shop.example.com/orders/1042/paid",
+                    "customer_email": "maria@example.com"
+                  }
+                },
+                "method now": {
+                  "value": {
+                    "amount": 10000,
+                    "currency": "php",
+                    "payment_method_data": {
+                      "type": "qrph"
+                    }
+                  }
+                },
+                "create and confirm": {
+                  "value": {
+                    "amount": 10000,
+                    "currency": "php",
+                    "payment_method_data": {
+                      "type": "card"
+                    },
+                    "confirm": true,
+                    "return_url": "https://shop.example.com/orders/1042/paid",
+                    "metadata": {
+                      "order_id": "1042"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The intent: `requires_action` with `next_action.redirect_to_url` to our hosted checkout\npage when created without a method, or `next_action.mount_embedded_checkout` with\n`checkout_mode` `embedded`; `requires_confirmation` with a method; or `requires_action`\nwith `next_action` when created with `confirm: true`.\n",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntent"
+                },
+                "examples": {
+                  "choose later": {
+                    "$ref": "#/components/examples/IntentWithChoices"
+                  },
+                  "embedded checkout": {
+                    "$ref": "#/components/examples/IntentEmbedded"
+                  },
+                  "create and confirm": {
+                    "$ref": "#/components/examples/IntentRedirect"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/PaymentRefused"
+          },
+          "503": {
+            "$ref": "#/components/responses/KeyedWriteUnavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Payment intents"
+        ],
+        "operationId": "listPaymentIntents",
+        "summary": "List payment intents",
+        "description": "Your payment intents in this key's mode, oldest first.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of intents.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/List"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/PaymentIntent"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/payment_intents/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Payment intents"
+        ],
+        "operationId": "retrievePaymentIntent",
+        "summary": "Retrieve a payment intent",
+        "responses": {
+          "200": {
+            "description": "The intent.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntent"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/payment_intents/{id}/confirm": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Payment intents"
+        ],
+        "operationId": "confirmPaymentIntent",
+        "summary": "Confirm a payment intent",
+        "description": "Starts an attempt at the payment, and the customer acts next: the intent moves to\n`requires_action` and `next_action` says what to show them. An intent without a method takes\none here in `payment_method_data[type]`, from its `payment_method_types`. An intent with its\nmethod may name it again or leave it out; naming another is a `conflict`, since its price is\nfixed with it — except after a failed attempt, when the customer may pay another way.\n\nConfirm an intent that is `requires_payment_method` or `requires_confirmation`: its first\nattempt, or another after one failed. An intent created without a method and waiting at our\nhosted checkout page is `requires_action`, and confirming it with a method starts its first\nattempt all the same. Confirming one already `requires_action` after a confirmation answers it\nunchanged, and however often it is confirmed, the customer is given one code or page per\nattempt. Any other status is a `conflict`.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "payment_method_data": {
+                    "$ref": "#/components/schemas/PaymentMethodData"
+                  },
+                  "return_url": {
+                    "$ref": "#/components/schemas/ReturnUrl"
+                  },
+                  "risk_signals": {
+                    "$ref": "#/components/schemas/RiskSignals"
+                  }
+                }
+              },
+              "examples": {
+                "choose qrph": {
+                  "value": {
+                    "payment_method_data": {
+                      "type": "qrph"
+                    }
+                  }
+                },
+                "choose cash": {
+                  "value": {
+                    "payment_method_data": {
+                      "type": "cash"
+                    }
+                  }
+                },
+                "with what you know of the customer": {
+                  "value": {
+                    "payment_method_data": {
+                      "type": "qrph"
+                    },
+                    "risk_signals": {
+                      "ip_address": "203.0.113.9",
+                      "device_id": "dev_8f2c",
+                      "email": "buyer@example.com"
+                    }
+                  }
+                },
+                "choose card": {
+                  "value": {
+                    "payment_method_data": {
+                      "type": "card"
+                    },
+                    "return_url": "https://shop.example.com/orders/1042/paid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The intent, in `requires_action`.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntent"
+                },
+                "examples": {
+                  "QR code to show": {
+                    "$ref": "#/components/examples/IntentQrCode"
+                  },
+                  "Cash reference to give the customer": {
+                    "$ref": "#/components/examples/IntentCashReference"
+                  },
+                  "Page to send the customer to": {
+                    "$ref": "#/components/examples/IntentRedirect"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/PaymentRefused"
+          },
+          "503": {
+            "$ref": "#/components/responses/KeyedWriteUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/payment_intents/{id}/cancel": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Payment intents"
+        ],
+        "operationId": "cancelPaymentIntent",
+        "summary": "Cancel a payment intent",
+        "description": "Cancels an intent the customer has not paid: one that is `requires_payment_method`,\n`requires_confirmation` or `requires_action`. Canceling one already `canceled` answers it\nunchanged. Once it is `processing` or `succeeded`, or while a confirm is still reaching the\npayment method, it cannot be canceled: that is a `conflict`.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cancellation_reason": {
+                    "type": "string",
+                    "enum": [
+                      "requested_by_customer",
+                      "duplicate",
+                      "fraudulent",
+                      "abandoned"
+                    ],
+                    "description": "Why you are canceling it. Optional."
+                  }
+                }
+              },
+              "examples": {
+                "duplicate": {
+                  "value": {
+                    "cancellation_reason": "duplicate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The intent, in `canceled`, with `canceled_at` and `cancellation_reason`.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntent"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "503": {
+            "$ref": "#/components/responses/KeyedWriteUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/test_helpers/payment_intents/{id}/simulate": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Test helpers"
+        ],
+        "operationId": "simulatePaymentIntent",
+        "summary": "Simulate a payment's outcome",
+        "description": "Gives a test-mode payment the outcome you choose, now, as if your customer had paid it, or\nfailed to. No customer pays a simulated QR code or a test cash reference, and no bank answers a\nsimulated card, so this is how a test payment moves on from `requires_action`. It works with a test key only: a live\nkey is refused with `test_mode_only`, and a live intent is never reached. See [Testing your\nintegration](https://docs.payments.finfactory.dev/merchant/guides/testing-your-integration/).\n\nThe intent must have a payment with the customer: [confirmed](https://docs.payments.finfactory.dev/merchant/reference/operations/confirmpaymentintent/),\nor, for an intent created without a method, with the method chosen on our checkout page.\nOutcomes are for the intent's method:\n\n| `outcome` | Method | The intent then |\n|---|---|---|\n| `paid` | `qrph` | `succeeded`, with `amount_received` equal to `amount`. A code already past its time is `expired` instead. |\n| `expired` | `qrph` | `requires_payment_method`, with `last_payment_error` `payment_intent_payment_attempt_expired`. The code can no longer be paid; confirm again for a new one. |\n| `paid` | `cash` | `succeeded` through `processing`, as when the customer pays the exact amount at a cash collection location. A reference already past its time is `expired` instead. |\n| `expired` | `cash` | `requires_payment_method`, with `last_payment_error` `payment_intent_payment_attempt_expired`. The reference can no longer be paid; confirm again for a new one. |\n| `approved` | `card` | `succeeded`. A card payment of `40400` is then charged back: see [Test mode and test values](https://docs.payments.finfactory.dev/merchant/guides/test-mode/). |\n| `three_d_secure_passed` | `card` | `succeeded`, as after the customer's bank has authenticated them. |\n| `declined` | `card` | `requires_payment_method`, with `last_payment_error` `card_declined`. A `decline_reason` adds a `decline_code` to it (test mode only). |\n| `three_d_secure_failed` | `card` | `requires_payment_method`, with `last_payment_error` `payment_intent_authentication_failure`. |\n| `abandoned` | `card` | `requires_payment_method`, with `last_payment_error` `payment_intent_payment_attempt_failed`: the customer left without paying. |\n\nThe intent and its events are those of a real payment: `payment_intent.succeeded` or\n`payment_intent.payment_failed` is sent, and a failed card payment can be confirmed again. An\nintent already settled, whether paid, canceled, or its attempt failed or expired, is answered\nas it is, and nothing changes: asking again, for the same outcome or another, is safe. An\noutcome that is not one of the intent's method is refused with `validation_failure`\nwhatever the intent's state.\n\n`Idempotency-Key` is required, as on every write on an intent.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulateOutcome"
+              },
+              "examples": {
+                "QR Ph paid": {
+                  "value": {
+                    "outcome": "paid"
+                  }
+                },
+                "QR Ph expired": {
+                  "value": {
+                    "outcome": "expired"
+                  }
+                },
+                "card approved": {
+                  "value": {
+                    "outcome": "approved"
+                  }
+                },
+                "card declined": {
+                  "value": {
+                    "outcome": "declined",
+                    "decline_reason": "insufficient_funds"
+                  }
+                },
+                "3-D Secure failed": {
+                  "value": {
+                    "outcome": "three_d_secure_failed"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The intent as it then is.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntent"
+                },
+                "examples": {
+                  "QR Ph paid": {
+                    "$ref": "#/components/examples/IntentSimulatedPaid"
+                  },
+                  "card declined": {
+                    "$ref": "#/components/examples/IntentSimulatedDeclined"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`validation_failure` with `invalid_parameter`: `param` is `outcome` when it is missing,\nnot an outcome, or not one for the intent's method; `decline_reason` when it is not\n`insufficient_funds`, `do_not_honor` or `expired_card`, or is sent with an outcome other\nthan `declined`; `Idempotency-Key` when the header is missing.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "type": "validation_failure",
+                    "code": "invalid_parameter",
+                    "message": "One of paid, expired for a qrph payment.",
+                    "param": "outcome",
+                    "request_id": "req_4f1c0b2e9a7d"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "description": "`authorization_failure` with `test_mode_only`: a live key was used. Nothing is simulated\nin live mode, and a live intent is not reachable even with a test key. Also\n`merchant_mismatch`, as on every call.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "type": "authorization_failure",
+                    "code": "test_mode_only",
+                    "message": "Test helpers take a test key: no outcome is simulated in live mode.",
+                    "param": null,
+                    "request_id": "req_4f1c0b2e9a7d"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "`conflict` with `intent_state`: the intent has no payment with the customer to give an\noutcome to. It is not confirmed yet, it is `requires_action` at our checkout page with no\nmethod chosen, or it is `processing`. Confirm it, or have the customer choose a method, and\nask again. `idempotency_key_reused` and `idempotency_key_in_use` as on every write.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "$ref": "#/components/responses/KeyedWriteUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/payment_methods": {
+      "get": {
+        "tags": [
+          "Payment methods"
+        ],
+        "operationId": "listPaymentMethods",
+        "summary": "List payment methods",
+        "description": "Your enabled methods, ordered by method then channel.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of payment methods.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/List"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/PaymentMethod"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/payment_methods/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Payment methods"
+        ],
+        "operationId": "retrievePaymentMethod",
+        "summary": "Retrieve a payment method",
+        "responses": {
+          "200": {
+            "description": "The payment method.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentMethod"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/refunds": {
+      "post": {
+        "tags": [
+          "Refunds"
+        ],
+        "operationId": "createRefund",
+        "summary": "Create a refund",
+        "description": "Returns all or part of a succeeded card payment, or the whole of a succeeded cash payment (see [Accepting\ncash](https://docs.payments.finfactory.dev/merchant/guides/accepting-cash/): that refund stays `processing` until your operator records it paid out). Leave `amount` out to refund what remains.\nThe payment intent stays `succeeded`; the refund is its own object. A payment can be refunded\nmore than once, until all of it has been. Fees are not returned by a refund. In test mode, a\ncard payment that was simulated paid is refunded at once: the refund comes back `succeeded`\nand nothing is returned.\n\nThe refund comes back `succeeded`, `processing` while it is still on its way (a\n`refund.succeeded` or `refund.failed` event follows), or `failed` with a `failure_reason`.\nEvery refund made sends `refund.created`, then `refund.updated` as it goes on its way, then\n`refund.succeeded` or `refund.failed`.\n\nRefusals, each with nothing refunded. The first three are refused before any refund is made.\nThe last two, and `refund_not_possible` when the card provider says so, are refused once the\ncard provider has answered: the refund is kept, `failed` with the same `failure_reason`, and\nis listed and sent as `refund.failed` like any other.\n\n| `type` | `code` | When |\n|---|---|---|\n| `invariant_violation` | `amount_exceeds_refundable` | More than the payment has left to refund. |\n| `policy_rejection` | `refund_not_possible` | The payment intent has not succeeded, was not paid by card or cash, or can no longer be refunded. |\n| `policy_rejection` | `refund_not_supported_by_provider` | The payment was made by QR, and its provider can't refund it. Refund the customer another way, such as in cash, and keep a record of it. |\n| `policy_rejection` | `refund_not_yet_available` | Part of a card payment cannot be refunded on the day it was made. Refund all of it the same day, or part of it from the next day. |\n| `policy_rejection` | `refunds_not_enabled` | Refunds are not enabled for your account with its card provider. Ask your platform operator to have them enabled. |\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "payment_intent"
+                ],
+                "properties": {
+                  "payment_intent": {
+                    "type": "string",
+                    "examples": [
+                      "pi_01j9x2m8k4q7r5t3v6w8y0z2a4"
+                    ]
+                  },
+                  "amount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "In the currency's smallest unit. Leave it out to refund what remains."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "requested_by_customer",
+                      "duplicate",
+                      "fraudulent"
+                    ]
+                  },
+                  "metadata": {
+                    "$ref": "#/components/schemas/Metadata"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The refund.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Refund"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/PolicyRejection"
+          },
+          "503": {
+            "$ref": "#/components/responses/KeyedWriteUnavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Refunds"
+        ],
+        "operationId": "listRefunds",
+        "summary": "List refunds",
+        "description": "Your refunds in this key's mode, oldest first.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "payment_intent",
+            "in": "query",
+            "description": "Only this intent's refunds.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/RefundList"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/refunds/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Refunds"
+        ],
+        "operationId": "retrieveRefund",
+        "summary": "Retrieve a refund",
+        "responses": {
+          "200": {
+            "description": "The refund.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Refund"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/disputes": {
+      "get": {
+        "tags": [
+          "Disputes"
+        ],
+        "operationId": "listDisputes",
+        "summary": "List disputes",
+        "description": "Your disputes in this key's mode, oldest first. Filter by the payment disputed with\n`payment_intent`, and by `status`. A `status` that is not one of the five is refused with\n`validation_failure` and `param` `status`.\n",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "payment_intent",
+            "in": "query",
+            "description": "Only this payment intent's disputes.",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "pi_01j9x2p4d6f8h0k2m4n6q8s0t2"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Only disputes in this status.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "open",
+                "under_review",
+                "won",
+                "lost",
+                "accepted"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of disputes.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/List"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Dispute"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                "example": {
+                  "object": "list",
+                  "data": [
+                    {
+                      "id": "dp_0199c3f2a1b47c1e9a20d4b8f35e",
+                      "object": "dispute",
+                      "amount": 10000,
+                      "currency": "php",
+                      "payment_intent": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+                      "status": "open",
+                      "reason": "fraud",
+                      "network_reason_code": "10.4",
+                      "case_reference": "CB-2026-0001842",
+                      "chargeback_cost": 50000,
+                      "admin_fee": 0,
+                      "cost_returned": 0,
+                      "debited": 60000,
+                      "charged_to": "you",
+                      "evidence_due_date": "2026-10-18",
+                      "evidence_request": null,
+                      "livemode": false,
+                      "created": 1791446400,
+                      "closed": null
+                    }
+                  ],
+                  "has_more": false,
+                  "next_cursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/disputes/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Disputes"
+        ],
+        "operationId": "retrieveDispute",
+        "summary": "Retrieve a dispute",
+        "description": "Another merchant's dispute, or one in the other mode, is `not_found`.",
+        "responses": {
+          "200": {
+            "description": "The dispute.",
+            "headers": {
+              "X-Request-ID": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dispute"
+                },
+                "examples": {
+                  "open": {
+                    "$ref": "#/components/examples/DisputeOpen"
+                  },
+                  "evidence requested": {
+                    "$ref": "#/components/examples/DisputeUnderReview"
+                  },
+                  "won": {
+                    "$ref": "#/components/examples/DisputeWon"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/webhook_endpoints": {
+      "post": {
+        "tags": [
+          "Webhook endpoints"
+        ],
+        "operationId": "createWebhookEndpoint",
+        "summary": "Create a webhook endpoint",
+        "description": "The endpoint's signing `secret` is returned on this response only: store it where your\nreceiver can read it. The URL must be `https://` and resolve only to public addresses;\naddresses on private networks are refused with `validation_failure` on `url`.\n\n`enabled_events` takes the event types that are sent today, those listed in\n[Webhooks](https://docs.payments.finfactory.dev/merchant/guides/webhooks/#event-types) without a Pending badge. A Pending type is refused with `validation_failure` until it ships, so a\nsubscription is never accepted and then sent nothing. `[\"*\"]` subscribes to every type,\nincluding those added later; `*` stands alone and is refused beside named types.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "enabled_events"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048,
+                    "examples": [
+                      "https://shop.example.com/webhooks"
+                    ]
+                  },
+                  "enabled_events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "examples": [
+                      [
+                        "payment_intent.succeeded",
+                        "payment_intent.payment_failed"
+                      ],
+                      [
+                        "*"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The endpoint, with its secret.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationFailure"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/WebhookEndpointCreateUnavailable"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Webhook endpoints"
+        ],
+        "operationId": "listWebhookEndpoints",
+        "summary": "List webhook endpoints",
+        "description": "Your endpoints in this key's mode.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of endpoints.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/List"
+                    },
+                    {
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/WebhookEndpoint"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/DependencyFailure"
+          }
+        }
+      }
+    },
+    "/v1/webhook_endpoints/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Webhook endpoints"
+        ],
+        "operationId": "updateWebhookEndpoint",
+        "summary": "Update a webhook endpoint",
+        "description": "Changes where the endpoint is, which events it is sent, or whether it is sent anything: set\n`status` to `enabled` to turn a disabled endpoint back on. Leave out what stays. Deliveries\nthat failed while it was disabled stay failed.\n",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "enabled_events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The types to send, or `[\"*\"]` for every type, including those added later."
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "enabled",
+                      "disabled"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/WebhookEndpointChangeUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/webhook_endpoints/{id}/disable": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Webhook endpoints"
+        ],
+        "operationId": "disableWebhookEndpoint",
+        "summary": "Disable a webhook endpoint",
+        "description": "Stops sending to the endpoint. Deliveries still waiting to be tried fail when they are.",
+        "responses": {
+          "200": {
+            "description": "The endpoint, disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/WebhookEndpointChangeUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/webhook_endpoints/{id}/rotate_secret": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Webhook endpoints"
+        ],
+        "operationId": "rotateWebhookEndpointSecret",
+        "summary": "Rotate a webhook endpoint's secret",
+        "description": "Issues a new signing secret, returned on this response only. For 24 hours deliveries carry a\nsignature made with each, so your receiver can switch over without dropping an event.\n",
+        "responses": {
+          "200": {
+            "description": "The endpoint, with its new secret.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationFailure"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationFailure"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/WebhookEndpointSecretUnavailable"
+          }
+        }
+      }
+    },
+    "/oauth/token": {
+      "post": {
+        "tags": [
+          "Access tokens"
+        ],
+        "operationId": "createAccessToken",
+        "summary": "Get an Access Token",
+        "description": "Exchanges your client ID and secret for an Access Token (the OAuth 2.0 client credentials\ngrant, RFC 6749). Send the client ID and secret in a Basic `Authorization` header, or as\n`client_id` and `client_secret` in the body, not both, and each parameter once. The token\nlasts 15 minutes; any\nstandard OAuth client library can call this and fetch a new token as each expires.\n\nErrors follow RFC 6749, not the `/v1` envelope. Every client ID and secret that proves\nnothing — an unknown client, a wrong secret, a revoked key — gets the same `invalid_client`.\nToken requests are rate limited per client ID and per address.\n",
+        "security": [
+          {
+            "ClientSecret": []
+          },
+          {}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "grant_type"
+                ],
+                "properties": {
+                  "grant_type": {
+                    "type": "string",
+                    "const": "client_credentials"
+                  },
+                  "client_id": {
+                    "type": "string",
+                    "description": "With `client_secret`, instead of a Basic header.",
+                    "examples": [
+                      "ci_test_4f2aK9mQ7xR1vT8bN3cL6hWd"
+                    ]
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "description": "With `client_id`, instead of a Basic header."
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "description": "The same parameters as a JSON object, for a client that sends JSON.",
+                "type": "object",
+                "required": [
+                  "grant_type"
+                ],
+                "properties": {
+                  "grant_type": {
+                    "type": "string",
+                    "const": "client_credentials"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The token. Every answer here is sent with `Cache-Control: no-store` and `Pragma: no-cache`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessToken"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`invalid_request` (no `grant_type`, or the client authenticated both ways), or `unsupported_grant_type` (anything but `client_credentials`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`invalid_client`: the client ID or secret is not valid. Sent with a `WWW-Authenticate: Basic` header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`rate_limited`: too many token requests. Try again shortly.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "payment_intent.created": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "paymentIntentCreated",
+        "summary": "payment_intent.created",
+        "description": "A payment intent was created. Its `next_action` is `null` even when it was created without a\nmethod: read the intent for its hosted checkout link, or its embedded checkout client token.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PaymentIntentEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "payment_intent.requires_action": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "paymentIntentRequiresAction",
+        "summary": "payment_intent.requires_action",
+        "description": "A payment intent waits for the customer: `next_action` says what they are to do. Sent when an\nintent is confirmed, and when one is created without a method to wait at our hosted checkout\npage or in embedded checkout. For that one, `next_action` is `null`: read the intent for its\nhosted checkout link, or its embedded checkout client token.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PaymentIntentEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "payment_intent.processing": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "paymentIntentProcessing",
+        "summary": "payment_intent.processing",
+        "description": "The customer acted and the outcome is not known yet.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PaymentIntentEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "payment_intent.succeeded": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "paymentIntentSucceeded",
+        "summary": "payment_intent.succeeded",
+        "description": "The payment succeeded.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PaymentIntentEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "payment_intent.payment_failed": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "paymentIntentPaymentFailed",
+        "summary": "payment_intent.payment_failed",
+        "description": "An attempt to pay failed: declined, failed, not paid in time, or left by the customer. The\nintent is back in\n`requires_payment_method`, with `last_payment_error` saying why, and waits for another\nconfirmation.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PaymentIntentEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "payment_intent.canceled": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "paymentIntentCanceled",
+        "summary": "payment_intent.canceled",
+        "description": "The payment intent was canceled.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PaymentIntentEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "refund.created": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "refundCreated",
+        "summary": "refund.created",
+        "description": "A refund was created.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RefundEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "refund.updated": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "refundUpdated",
+        "summary": "refund.updated",
+        "description": "A refund changed: it is on its way.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RefundEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "refund.succeeded": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "refundSucceeded",
+        "summary": "refund.succeeded",
+        "description": "A refund reached the customer.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RefundEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "refund.failed": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "refundFailed",
+        "summary": "refund.failed",
+        "description": "A refund could not be made. `failure_reason` says why.\n",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RefundEvent"
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "dispute.created": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "disputeCreated",
+        "summary": "dispute.created",
+        "description": "A customer disputed one of your card payments through their bank: a chargeback was raised\nand its dispute opened, `open`. Sent once per dispute, however often the card network reports\nthe same case. The disputed amount, `chargeback_cost` and `admin_fee` are taken from the funds\ndue to you from now. `evidence_due_date` says by when to respond: see [Disputes](https://docs.payments.finfactory.dev/merchant/guides/disputes/).\n",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeEvent"
+              },
+              "example": {
+                "id": "evt_0199c3f2a1c05d2e8b31f4a7c6d9",
+                "object": "event",
+                "type": "dispute.created",
+                "created": 1791446400,
+                "api_version": "v1",
+                "livemode": false,
+                "tenant_id": "7d2e4f61-3a8b-4c95-b0e7-2f1a9c6d8e43",
+                "merchant_id": "c4a91e2b-6f37-4d08-9b5c-e0d2f8a17b36",
+                "data": {
+                  "object": {
+                    "id": "dp_0199c3f2a1b47c1e9a20d4b8f35e",
+                    "object": "dispute",
+                    "amount": 10000,
+                    "currency": "php",
+                    "payment_intent": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+                    "status": "open",
+                    "reason": "fraud",
+                    "network_reason_code": "10.4",
+                    "case_reference": "CB-2026-0001842",
+                    "chargeback_cost": 50000,
+                    "admin_fee": 0,
+                    "cost_returned": 0,
+                    "debited": 60000,
+                    "charged_to": "you",
+                    "evidence_due_date": "2026-10-18",
+                    "evidence_request": null,
+                    "livemode": false,
+                    "created": 1791446400,
+                    "closed": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "dispute.updated": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "disputeUpdated",
+        "summary": "dispute.updated",
+        "description": "A dispute still being worked changed. It is sent when:\n\n- the dispute goes `under_review`;\n- evidence is asked for: `evidence_request` says what is needed;\n- `evidence_due_date` is set or moved;\n- evidence is uploaded for it from the Merchant Dashboard.\n\nCompare the dispute with the one you have to see what changed.\n",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeEvent"
+              },
+              "example": {
+                "id": "evt_0199c8b0d7e24f6a9c13b5e8d2a0",
+                "object": "event",
+                "type": "dispute.updated",
+                "created": 1791515700,
+                "api_version": "v1",
+                "livemode": false,
+                "tenant_id": "7d2e4f61-3a8b-4c95-b0e7-2f1a9c6d8e43",
+                "merchant_id": "c4a91e2b-6f37-4d08-9b5c-e0d2f8a17b36",
+                "data": {
+                  "object": {
+                    "id": "dp_0199c3f2a1b47c1e9a20d4b8f35e",
+                    "object": "dispute",
+                    "amount": 10000,
+                    "currency": "php",
+                    "payment_intent": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+                    "status": "under_review",
+                    "reason": "fraud",
+                    "network_reason_code": "10.4",
+                    "case_reference": "CB-2026-0001842",
+                    "chargeback_cost": 50000,
+                    "admin_fee": 0,
+                    "cost_returned": 0,
+                    "debited": 60000,
+                    "charged_to": "you",
+                    "evidence_due_date": "2026-10-18",
+                    "evidence_request": "Proof of delivery signed by the customer, and the order's invoice.",
+                    "livemode": false,
+                    "created": 1791446400,
+                    "closed": null
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    },
+    "dispute.closed": {
+      "post": {
+        "tags": [
+          "Event types"
+        ],
+        "operationId": "disputeClosed",
+        "summary": "dispute.closed",
+        "description": "A dispute was decided, and `closed` says when. Its `status` is final:\n\n- `won`: the case was decided for you, or the network reversed the chargeback. The disputed\n  amount is returned to you, and so is the chargeback cost if the card provider returned\n  it: `cost_returned` says how much.\n- `lost`: the case was decided for the customer. Nothing is returned.\n- `accepted`: you, or the operations team, accepted the chargeback. Nothing is returned.\n\nNothing is sent for a dispute after this.\n",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeEvent"
+              },
+              "example": {
+                "id": "evt_0199f1a4c2b86e3d7a50c9f2b1e4",
+                "object": "event",
+                "type": "dispute.closed",
+                "created": 1792558800,
+                "api_version": "v1",
+                "livemode": false,
+                "tenant_id": "7d2e4f61-3a8b-4c95-b0e7-2f1a9c6d8e43",
+                "merchant_id": "c4a91e2b-6f37-4d08-9b5c-e0d2f8a17b36",
+                "data": {
+                  "object": {
+                    "id": "dp_0199c3f2a1b47c1e9a20d4b8f35e",
+                    "object": "dispute",
+                    "amount": 10000,
+                    "currency": "php",
+                    "payment_intent": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+                    "status": "won",
+                    "reason": "fraud",
+                    "network_reason_code": "10.4",
+                    "case_reference": "CB-2026-0001842",
+                    "chargeback_cost": 50000,
+                    "admin_fee": 0,
+                    "cost_returned": 50000,
+                    "debited": 60000,
+                    "charged_to": "you",
+                    "evidence_due_date": "2026-10-18",
+                    "evidence_request": "Proof of delivery signed by the customer, and the order's invoice.",
+                    "livemode": false,
+                    "created": 1791446400,
+                    "closed": 1792558800
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Received. Answer with any 2xx within 10 seconds."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "AccessToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "An Access Token from `POST /oauth/token`, `at_test_...` or `at_live_...`, as a Bearer token.\nIt lasts 15 minutes. The client secret is refused here.\n"
+      },
+      "ClientSecret": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Your client ID and client secret, `ci_test_...` and `sk_test_...` in test mode, sent to the\ntoken endpoint only.\n"
+      }
+    },
+    "requestBodies": {
+      "PaymentIntentEvent": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Event"
+                },
+                {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "object": {
+                          "$ref": "#/components/schemas/PaymentIntent"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "RefundEvent": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Event"
+                },
+                {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "object": {
+                          "$ref": "#/components/schemas/Refund"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "WebhookEndpointCreateUnavailable": {
+        "description": "`dependency_failure` with `service_unavailable`: something on our side did not answer, or failed part-way. Whether the endpoint was created is not known, and its signing secret is shown only in the answer you did not get. This call takes no `Idempotency-Key`, so sending it again makes a second endpoint if the first was made. List your endpoints first with [List webhook endpoints](https://docs.payments.finfactory.dev/merchant/reference/operations/listwebhookendpoints/): if the endpoint is there, do not create another; [rotate its secret](https://docs.payments.finfactory.dev/merchant/reference/operations/rotatewebhookendpointsecret/) to get a secret you can read, or disable it. If it is not, create it again.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "WebhookEndpointChangeUnavailable": {
+        "description": "`dependency_failure` with `service_unavailable`: something on our side did not answer, or failed part-way. Whether the change was made is not known. This call takes no `Idempotency-Key` and needs none: send the same request again, and the endpoint ends up as the first call would have left it, however many times it is sent. Read the endpoint to see how it stands.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "WebhookEndpointSecretUnavailable": {
+        "description": "`dependency_failure` with `service_unavailable`: something on our side did not answer, or failed part-way. Whether the secret was rotated is not known, and a new secret is shown only in the answer you did not get. This call takes no `Idempotency-Key`: send it again, and it rotates again, so use the secret in the answer you receive. A secret the unanswered call made, or the one before it, keeps signing for 24 hours and then stops.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RefundList": {
+        "description": "A page of refunds.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/List"
+                },
+                {
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Refund"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "`not_found`: `resource_missing` for an id this key cannot see, `route_missing` for a path that does not exist.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "AuthorizationFailure": {
+        "description": "`authorization_failure` with `merchant_mismatch`: a `Merchant-Id` header, query parameter or body field names a merchant or tenant other than the key's.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "AuthenticationFailure": {
+        "description": "`authentication_failure`: `access_token_required` when no token was sent, `invalid_access_token` when it is not valid, has expired, or is a client secret. Sent with a `WWW-Authenticate: Bearer` header, which adds `error=\"invalid_token\"` when a token was sent.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "DependencyFailure": {
+        "description": "`dependency_failure` with `service_unavailable`: something on our side, or a payment network behind it, did not answer. This call only reads, so nothing was changed; retry.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ValidationFailure": {
+        "description": "`validation_failure`: `invalid_parameter` for a parameter missing or not valid, named in `param`; `invalid_json` for a body that is not JSON; `unsupported_media_type` for a body that is not sent as JSON; `not_acceptable` when the request will not accept JSON; `method_not_allowed` for an HTTP method the path does not take.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "type": "validation_failure",
+                "code": "invalid_parameter",
+                "message": "A whole number of minor units, from 1 to 999999999999999999.",
+                "param": "amount",
+                "request_id": "req_4f1c0b2e9a7d"
+              }
+            }
+          }
+        }
+      },
+      "KeyedWriteUnavailable": {
+        "description": "`dependency_failure` with `service_unavailable`: something on our side, or a payment network behind it, did not answer, or failed part-way. Whether the call took effect is not known, so do not assume it did not. Retry the same request with the same `Idempotency-Key`, and never make a new key for the retry: if the first call took effect, you are answered with its result (the payment intent or refund it made, or the intent as it now is) and nothing is done a second time. A retry refused with `conflict` and `intent_state` means the intent is no longer in a state that allows the call: the first call may have taken effect, or the customer may have acted since. Read the intent. If the failure came while the answer was being stored, the key is held for five minutes and a retry in that time answers `409` with `idempotency_key_in_use`: retry shortly. See [When a write answers 503](https://docs.payments.finfactory.dev/merchant/guides/idempotency/#when-a-write-answers-503).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PolicyRejection": {
+        "description": "`policy_rejection`: your account may not do this now, for the reason in `code`.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "`conflict`: `intent_state` when the intent is not in a state that allows this; `idempotency_key_reused` when the Idempotency-Key was used for a different request. `timeout_or_in_progress` with `idempotency_key_in_use` while a request with the same key is still running, or with `refund_in_progress` for a refund while another refund of the same payment is still being processed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PaymentRefused": {
+        "description": "`policy_rejection`: this payment cannot be taken now. `code` says why:\n\n| `code` | Meaning |\n|---|---|\n| `account_inactive` | Your account is not active. |\n| `not_permitted_for_account` | Your account may not use this method yet. |\n| `method_not_enabled` | The method is not enabled for your account. |\n| `method_not_set_up` | The method is enabled but its setup is not finished. |\n| `method_suspended` | The method is suspended for your account. |\n| `pricing_unavailable` | No price is set for this method and amount. |\n| `payment_method_unavailable` | The method cannot take this payment on this channel yet. |\n| `no_payment_method_available` | None of your methods can take this payment now. |\n| `test_mode_unavailable` | Confirming only: this method cannot be simulated in test mode. |\n| `limit_exceeded` | Confirming only: this payment would take your account past its limit. |\n| `restricted` | Confirming only: payments are restricted for your account, store or terminal at the moment. |\n| `risk_declined` | Confirming only: this payment was declined by a risk check. |\n| `not_available` | Unavailable for another reason. |\n",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "type": "policy_rejection",
+                "code": "method_suspended",
+                "message": "This payment method is suspended for your account.",
+                "param": null,
+                "request_id": "req_4f1c0b2e9a7d"
+              }
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "IntentWithChoices": {
+        "summary": "Created without a method",
+        "value": {
+          "id": "pi_01j9x2m8k4q7r5t3v6w8y0z2a4",
+          "object": "payment_intent",
+          "amount": 10000,
+          "amount_received": 0,
+          "currency": "php",
+          "payment_method_types": [
+            "card",
+            "qrph"
+          ],
+          "channel": "ecommerce",
+          "status": "requires_action",
+          "next_action": {
+            "type": "redirect_to_url",
+            "redirect_to_url": {
+              "url": "https://checkout.example.com/pay/q3Jx8m1Vw0b_Zc4N-7pLkTfYs2HdRa9uEoGiW6nBvXy",
+              "return_url": "https://shop.example.com/orders/1042/paid"
+            }
+          },
+          "last_payment_error": null,
+          "cancellation_reason": null,
+          "canceled_at": null,
+          "description": "Order 1042",
+          "metadata": {
+            "order_id": "1042"
+          },
+          "livemode": false,
+          "created": 1790411400
+        }
+      },
+      "IntentEmbedded": {
+        "summary": "Created without a method, for embedded checkout",
+        "value": {
+          "id": "pi_01j9x2m8k4q7r5t3v6w8y0z2a4",
+          "object": "payment_intent",
+          "amount": 10000,
+          "amount_received": 0,
+          "currency": "php",
+          "payment_method_types": [
+            "card",
+            "qrph",
+            "cash"
+          ],
+          "channel": "ecommerce",
+          "status": "requires_action",
+          "next_action": {
+            "type": "mount_embedded_checkout",
+            "mount_embedded_checkout": {
+              "client_token": "ct_6QYI9milpE_Q7-uM7wvlj7fwyKooT2868Dm45Wwigcs",
+              "expires_at": 1790413200
+            }
+          },
+          "last_payment_error": null,
+          "cancellation_reason": null,
+          "canceled_at": null,
+          "description": "Order 1042",
+          "metadata": {},
+          "livemode": false,
+          "created": 1790411400
+        }
+      },
+      "IntentQrCode": {
+        "summary": "Confirmed with qrph",
+        "value": {
+          "id": "pi_01j9x2m8k4q7r5t3v6w8y0z2a4",
+          "object": "payment_intent",
+          "amount": 10000,
+          "amount_received": 0,
+          "currency": "php",
+          "payment_method_types": [
+            "qrph"
+          ],
+          "channel": "ecommerce",
+          "status": "requires_action",
+          "next_action": {
+            "type": "qrph_display_qr_code",
+            "qrph_display_qr_code": {
+              "data": "00020101021228...",
+              "expires_at": 1790412300
+            }
+          },
+          "last_payment_error": null,
+          "cancellation_reason": null,
+          "canceled_at": null,
+          "description": "Order 1042",
+          "metadata": {
+            "order_id": "1042"
+          },
+          "livemode": false,
+          "created": 1790411400
+        }
+      },
+      "IntentCashReference": {
+        "summary": "Confirmed with cash",
+        "value": {
+          "id": "pi_01j9x2m8k4q7r5t3v6w8y0z2a4",
+          "object": "payment_intent",
+          "amount": 10000,
+          "amount_received": 0,
+          "currency": "php",
+          "payment_method_types": [
+            "cash"
+          ],
+          "channel": "ecommerce",
+          "status": "requires_action",
+          "next_action": {
+            "type": "cash_display_reference",
+            "cash_display_reference": {
+              "reference": "7340 5129 8806",
+              "amount": 10000,
+              "currency": "php",
+              "expires_at": 1790584200,
+              "instructions": "Give this reference to the cashier at a cash collection location and pay the exact amount in cash."
+            }
+          },
+          "last_payment_error": null,
+          "cancellation_reason": null,
+          "canceled_at": null,
+          "description": "Order 1042",
+          "metadata": {
+            "order_id": "1042"
+          },
+          "livemode": false,
+          "created": 1790411400
+        }
+      },
+      "IntentRedirect": {
+        "summary": "Confirmed with card",
+        "value": {
+          "id": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+          "object": "payment_intent",
+          "amount": 10000,
+          "amount_received": 0,
+          "currency": "php",
+          "payment_method_types": [
+            "card"
+          ],
+          "channel": "ecommerce",
+          "status": "requires_action",
+          "next_action": {
+            "type": "redirect_to_url",
+            "redirect_to_url": {
+              "url": "https://pay.example.com/checkout/7c2e9a41",
+              "return_url": "https://shop.example.com/orders/1042/paid"
+            }
+          },
+          "last_payment_error": null,
+          "cancellation_reason": null,
+          "canceled_at": null,
+          "description": null,
+          "metadata": {
+            "order_id": "1042"
+          },
+          "livemode": false,
+          "created": 1790411400
+        }
+      },
+      "IntentSimulatedPaid": {
+        "summary": "A QR Ph payment simulated paid",
+        "value": {
+          "id": "pi_01j9x2m8k4q7r5t3v6w8y0z2a4",
+          "object": "payment_intent",
+          "amount": 10000,
+          "amount_received": 10000,
+          "currency": "php",
+          "payment_method_types": [
+            "qrph"
+          ],
+          "channel": "ecommerce",
+          "status": "succeeded",
+          "next_action": null,
+          "last_payment_error": null,
+          "cancellation_reason": null,
+          "canceled_at": null,
+          "description": "Order 1042",
+          "metadata": {
+            "order_id": "1042"
+          },
+          "livemode": false,
+          "created": 1790411400
+        }
+      },
+      "IntentSimulatedDeclined": {
+        "summary": "A card payment simulated declined for insufficient funds",
+        "value": {
+          "id": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+          "object": "payment_intent",
+          "amount": 10000,
+          "amount_received": 0,
+          "currency": "php",
+          "payment_method_types": [
+            "card"
+          ],
+          "channel": "ecommerce",
+          "status": "requires_payment_method",
+          "next_action": null,
+          "last_payment_error": {
+            "code": "card_declined",
+            "decline_code": "insufficient_funds",
+            "message": "The card has insufficient funds."
+          },
+          "cancellation_reason": null,
+          "canceled_at": null,
+          "description": null,
+          "metadata": {
+            "order_id": "1042"
+          },
+          "livemode": false,
+          "created": 1790411400
+        }
+      },
+      "DisputeOpen": {
+        "summary": "Open, as the chargeback arrived",
+        "value": {
+          "id": "dp_0199c3f2a1b47c1e9a20d4b8f35e",
+          "object": "dispute",
+          "amount": 10000,
+          "currency": "php",
+          "payment_intent": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+          "status": "open",
+          "reason": "fraud",
+          "network_reason_code": "10.4",
+          "case_reference": "CB-2026-0001842",
+          "chargeback_cost": 50000,
+          "admin_fee": 0,
+          "cost_returned": 0,
+          "debited": 60000,
+          "charged_to": "you",
+          "evidence_due_date": "2026-10-18",
+          "evidence_request": null,
+          "livemode": false,
+          "created": 1791446400,
+          "closed": null
+        }
+      },
+      "DisputeUnderReview": {
+        "summary": "Under review, with evidence asked for",
+        "value": {
+          "id": "dp_0199c3f2a1b47c1e9a20d4b8f35e",
+          "object": "dispute",
+          "amount": 10000,
+          "currency": "php",
+          "payment_intent": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+          "status": "under_review",
+          "reason": "fraud",
+          "network_reason_code": "10.4",
+          "case_reference": "CB-2026-0001842",
+          "chargeback_cost": 50000,
+          "admin_fee": 0,
+          "cost_returned": 0,
+          "debited": 60000,
+          "charged_to": "you",
+          "evidence_due_date": "2026-10-18",
+          "evidence_request": "Proof of delivery signed by the customer, and the order's invoice.",
+          "livemode": false,
+          "created": 1791446400,
+          "closed": null
+        }
+      },
+      "DisputeWon": {
+        "summary": "Won",
+        "value": {
+          "id": "dp_0199c3f2a1b47c1e9a20d4b8f35e",
+          "object": "dispute",
+          "amount": 10000,
+          "currency": "php",
+          "payment_intent": "pi_01j9x2p4d6f8h0k2m4n6q8s0t2",
+          "status": "won",
+          "reason": "fraud",
+          "network_reason_code": "10.4",
+          "case_reference": "CB-2026-0001842",
+          "chargeback_cost": 50000,
+          "admin_fee": 0,
+          "cost_returned": 50000,
+          "debited": 60000,
+          "charged_to": "you",
+          "evidence_due_date": "2026-10-18",
+          "evidence_request": "Proof of delivery signed by the customer, and the order's invoice.",
+          "livemode": false,
+          "created": 1791446400,
+          "closed": 1792558800
+        }
+      }
+    },
+    "schemas": {
+      "PaymentIntent": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "amount",
+          "amount_received",
+          "currency",
+          "payment_method_types",
+          "channel",
+          "status",
+          "next_action",
+          "last_payment_error",
+          "cancellation_reason",
+          "canceled_at",
+          "description",
+          "metadata",
+          "livemode",
+          "created"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "pi_01j9x2m8k4q7r5t3v6w8y0z2a4"
+            ]
+          },
+          "object": {
+            "type": "string",
+            "const": "payment_intent"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "In the currency's minor unit."
+          },
+          "amount_received": {
+            "type": "integer",
+            "description": "The amount paid: `amount` once `succeeded`, and `0` until then."
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "payment_method_types": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "The chosen method, such as `[qrph]`, once there is one. Until then, the methods that can\ntake this payment now: confirm with one. In an event for an intent with no method, the\nmethods you allowed at creation, or `null` if you allowed any.\n",
+            "examples": [
+              [
+                "card",
+                "qrph"
+              ]
+            ]
+          },
+          "channel": {
+            "type": "string",
+            "description": "Where the payment is taken: `ecommerce` for every intent your server creates. Payments\ntaken on terminals will say `pos` (Pending).\n",
+            "examples": [
+              "ecommerce"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "requires_payment_method",
+              "requires_confirmation",
+              "requires_action",
+              "processing",
+              "succeeded",
+              "canceled"
+            ]
+          },
+          "next_action": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/QrphDisplayQrCode"
+              },
+              {
+                "$ref": "#/components/schemas/CashDisplayReference"
+              },
+              {
+                "$ref": "#/components/schemas/RedirectToUrl"
+              },
+              {
+                "$ref": "#/components/schemas/MountEmbeddedCheckout"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the customer is to do, while the intent is `requires_action`. `null` otherwise. For\nan intent created without a method, `redirect_to_url` to our hosted checkout page while\nits checkout link is open, or, with `checkout_mode` `embedded`, `mount_embedded_checkout`\nwhile its checkout session is open; either until the customer starts a payment there,\nwhen it is that payment's own step. An event never carries the link or the client\ntoken: read the intent for them.\n"
+          },
+          "last_payment_error": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LastPaymentError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the last attempt failed. `null` again once another attempt starts."
+          },
+          "cancellation_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "requested_by_customer",
+              "duplicate",
+              "fraudulent",
+              "abandoned",
+              null
+            ],
+            "description": "The reason given when it was canceled, if any."
+          },
+          "canceled_at": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "When it was canceled, as a Unix timestamp."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The `metadata` you gave it. `{}` if none."
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "integer",
+            "description": "When it was created, as a Unix timestamp.",
+            "examples": [
+              1790411400
+            ]
+          }
+        }
+      },
+      "QrphDisplayQrCode": {
+        "type": "object",
+        "required": [
+          "type",
+          "qrph_display_qr_code"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "qrph_display_qr_code"
+          },
+          "qrph_display_qr_code": {
+            "type": "object",
+            "required": [
+              "data",
+              "expires_at"
+            ],
+            "properties": {
+              "data": {
+                "type": "string",
+                "description": "The QR payload. Render it as a QR code for the customer to scan with their banking app."
+              },
+              "expires_at": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "description": "When the code stops being payable, as a Unix timestamp."
+              }
+            }
+          }
+        }
+      },
+      "CashDisplayReference": {
+        "type": "object",
+        "required": [
+          "type",
+          "cash_display_reference"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "cash_display_reference"
+          },
+          "cash_display_reference": {
+            "type": "object",
+            "required": [
+              "reference",
+              "amount",
+              "currency",
+              "expires_at",
+              "instructions"
+            ],
+            "properties": {
+              "reference": {
+                "type": "string",
+                "description": "The payment reference, unique to this attempt. Give it to the customer to pay at a cash collection location."
+              },
+              "amount": {
+                "type": "integer",
+                "description": "The exact amount to pay, in the currency's minor unit."
+              },
+              "currency": {
+                "$ref": "#/components/schemas/Currency"
+              },
+              "expires_at": {
+                "type": "integer",
+                "description": "When the reference stops being payable, as a Unix timestamp. After it the attempt fails as expired."
+              },
+              "instructions": {
+                "type": "string",
+                "description": "Words to show the customer. May be reworded, so never branch on it."
+              }
+            }
+          }
+        }
+      },
+      "RedirectToUrl": {
+        "type": "object",
+        "required": [
+          "type",
+          "redirect_to_url"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "redirect_to_url"
+          },
+          "redirect_to_url": {
+            "type": "object",
+            "required": [
+              "url"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "The payment page: a card's, or our hosted checkout page for an intent created without\na method. Send the customer there.\n"
+              },
+              "return_url": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri",
+                "description": "Where the customer comes back to, or null when you gave none: your `return_url`, or our hosted checkout page when\nthe customer chose card there, which then sends them on to yours. For the hosted\ncheckout page itself, the `return_url` you gave on create.\n"
+              }
+            }
+          }
+        }
+      },
+      "MountEmbeddedCheckout": {
+        "type": "object",
+        "required": [
+          "type",
+          "mount_embedded_checkout"
+        ],
+        "description": "An intent created with `checkout_mode` `embedded`, waiting for the customer in embedded\ncheckout on your page. See [Embedded checkout](https://docs.payments.finfactory.dev/merchant/guides/embedded-checkout/).\n",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "mount_embedded_checkout"
+          },
+          "mount_embedded_checkout": {
+            "type": "object",
+            "required": [
+              "client_token",
+              "expires_at"
+            ],
+            "properties": {
+              "client_token": {
+                "type": "string",
+                "pattern": "^ct_",
+                "description": "What your page mounts embedded checkout with, beside your publishable key, from one of\nyour registered origins. The same on every read while it is here. It opens this one\npayment's checkout: give it only to the customer paying.\n",
+                "examples": [
+                  "ct_6QYI9milpE_Q7-uM7wvlj7fwyKooT2868Dm45Wwigcs"
+                ]
+              },
+              "expires_at": {
+                "type": "integer",
+                "description": "When the checkout session ends, as a Unix timestamp. After it, the client token opens nothing.",
+                "examples": [
+                  1790413200
+                ]
+              }
+            }
+          }
+        }
+      },
+      "CheckoutMode": {
+        "type": "string",
+        "enum": [
+          "hosted",
+          "embedded"
+        ],
+        "default": "hosted",
+        "description": "Where the customer pays an intent created without a method: `hosted`, on our hosted checkout\npage, which `next_action.redirect_to_url` links to; or `embedded`, in embedded checkout on\nyour own page, which `next_action.mount_embedded_checkout` gives the client token for. Only\non create, and only with no payment method and without `confirm`; anywhere else, or any\nother value, is refused with `param` `checkout_mode`. With `embedded`, a `cancel_url` is\nrefused.\n",
+        "examples": [
+          "embedded"
+        ]
+      },
+      "LastPaymentError": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "card_declined",
+              "expired_card",
+              "payment_intent_authentication_failure",
+              "payment_intent_payment_attempt_failed",
+              "payment_intent_payment_attempt_expired"
+            ],
+            "description": "`card_declined`: the card was declined. `expired_card`: the card has expired (test mode\nonly today). `payment_intent_authentication_failure`: the customer did not complete the\ncard's authentication. `payment_intent_payment_attempt_failed`: the attempt failed, or the\ncustomer left without paying. `payment_intent_payment_attempt_expired`: the customer did\nnot pay in time.\n"
+          },
+          "decline_code": {
+            "type": "string",
+            "enum": [
+              "insufficient_funds",
+              "do_not_honor",
+              "expired_card"
+            ],
+            "description": "Why the card was declined, when the decline names a reason. **Test mode only today:** it\nappears when you simulate a decline with a `decline_reason` (see [Simulate a payment's\noutcome](https://docs.payments.finfactory.dev/merchant/reference/operations/simulatepaymentintent/)), and a live decline does not carry it yet, so\nnever depend on it there.\n"
+          },
+          "message": {
+            "type": "string",
+            "description": "Words you can show the customer. May be reworded, so never branch on it."
+          }
+        }
+      },
+      "SimulateOutcome": {
+        "type": "object",
+        "required": [
+          "outcome"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "paid",
+              "expired",
+              "approved",
+              "declined",
+              "three_d_secure_passed",
+              "three_d_secure_failed",
+              "abandoned"
+            ],
+            "description": "`paid` or `expired` for a QR Ph or cash payment; `approved`, `declined`,\n`three_d_secure_passed`, `three_d_secure_failed` or `abandoned` for a card payment.\n"
+          },
+          "decline_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "insufficient_funds",
+              "do_not_honor",
+              "expired_card",
+              null
+            ],
+            "description": "With `declined` only: the reason the decline names, which comes back as\n`last_payment_error.decline_code`. Leave it out, or send `null`, for a plain decline.\n"
+          }
+        }
+      },
+      "PaymentMethodData": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "description": "The method to pay with. Its price is fixed with it until an attempt fails. A method that is\nmissing or not valid is\nrefused with `validation_failure` and `param` `payment_method_data[type]`.\n",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "A payment method type, such as `qrph`, `card` or `cash`.",
+            "examples": [
+              "qrph"
+            ]
+          }
+        }
+      },
+      "Metadata": {
+        "type": "object",
+        "maxProperties": 50,
+        "propertyNames": {
+          "maxLength": 40,
+          "pattern": "^[^\\[\\]]+$"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "description": "Your own key-value pairs, returned as given and carried in webhooks: up to 50 keys of up to\n40 characters without square brackets, each with a text value of up to 500 characters.\n",
+        "examples": [
+          {
+            "order_id": "1042"
+          }
+        ]
+      },
+      "RiskSignals": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "What you know of the customer paying, for the platform's risk checks. Each is optional; send\nwhat you have. The email is hashed before it is checked and is never stored. Send these with\nthe confirmation: on create only with `confirm: true`.\n",
+        "properties": {
+          "ip_address": {
+            "type": "string",
+            "description": "The customer's IP address, IPv4 or IPv6, as your server saw it.",
+            "examples": [
+              "203.0.113.9"
+            ]
+          },
+          "device_id": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9._:-]{1,64}$",
+            "description": "Your identifier for the customer's device or browser session."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "description": "The customer's email address."
+          }
+        }
+      },
+      "ReturnUrl": {
+        "type": "string",
+        "format": "uri",
+        "maxLength": 2048,
+        "description": "Where the customer comes back to after a payment page, such as a card's. Required to confirm\na card payment; one given here replaces an earlier one. `https` in live mode, `http` or\n`https` in test mode. On create, only with `confirm: true` — or with no payment method, when\nit is where our hosted checkout page sends the customer back to once they are done, or, with\n`checkout_mode` `embedded`, where our return page sends them after paying by card; embedded\ncheckout offers card only when the intent has one.\n\nThe customer comes back with `payment_intent=<id>` added to it, and from the hosted checkout\npage with `checkout_session=<id>` too, never a status. Coming back proves nothing: retrieve\nthe intent, or wait for its webhook, to know how it went.\n",
+        "examples": [
+          "https://shop.example.com/orders/1042/paid"
+        ]
+      },
+      "CancelUrl": {
+        "type": "string",
+        "format": "uri",
+        "maxLength": 2048,
+        "description": "Where our hosted checkout page sends a customer who cancels. Only on create, and only with no\npayment method and without `confirm`; refused with `checkout_mode` `embedded`, where a\ncustomer who cancels stays on your page. `https` in live mode, `http` or `https` in test mode, as\nfor `return_url`. Without one, a customer who cancels goes to your `return_url`.\n\nThe customer comes back with `payment_intent=<id>` and `checkout_session=<id>` added to it,\nnever a status. It is not shown on the intent.\n",
+        "examples": [
+          "https://shop.example.com/cart"
+        ]
+      },
+      "CustomerEmail": {
+        "type": "string",
+        "format": "email",
+        "maxLength": 254,
+        "description": "Your customer's email, if you have it: our hosted checkout page, or embedded checkout, fills\nits optional receipt field with it, and the customer can change or clear it. Once the payment succeeds, one\nreceipt is sent to the address the customer leaves there. Only on create, and only with no\npayment method and without `confirm`; anything that is not an email address is refused\nwith `param` `customer_email`.\n\nIt is used for the receipt and, hashed, for our risk checks. It is not shown on the intent,\nnor sent in any event or webhook.\n",
+        "examples": [
+          "maria@example.com"
+        ]
+      },
+      "PaymentMethod": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "method",
+          "channel",
+          "available",
+          "unavailable_reason",
+          "livemode"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "`pm_<method>-<channel>`.",
+            "examples": [
+              "pm_qrph-ecommerce"
+            ]
+          },
+          "object": {
+            "type": "string",
+            "const": "payment_method"
+          },
+          "method": {
+            "type": "string",
+            "examples": [
+              "qrph"
+            ]
+          },
+          "channel": {
+            "type": "string",
+            "examples": [
+              "ecommerce"
+            ]
+          },
+          "available": {
+            "type": "boolean",
+            "description": "Whether it can take a payment now."
+          },
+          "unavailable_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "account_inactive",
+              "not_permitted_for_account",
+              "method_not_enabled",
+              "method_not_set_up",
+              "method_suspended",
+              "not_available",
+              null
+            ],
+            "description": "Why it cannot, when `available` is false."
+          },
+          "livemode": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Refund": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "re_01j9x3a1b2c3d4e5f6g7h8j9k0"
+            ]
+          },
+          "object": {
+            "type": "string",
+            "const": "refund"
+          },
+          "payment_intent": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "processing",
+              "awaiting_approval",
+              "succeeded",
+              "failed"
+            ],
+            "description": "`created` for the moment it is made, `processing` while it is on its way, then\n`succeeded` or `failed`. `awaiting_approval` while the platform's risk team looks at it\nbefore it is sent: it then goes on, or fails as `risk_declined`. Nothing is refunded while\nit waits, and the amount stays held against what the payment has left to refund.\n"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "requested_by_customer",
+              "duplicate",
+              "fraudulent",
+              null
+            ]
+          },
+          "failure_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "declined",
+              "refund_not_possible",
+              "refund_not_yet_available",
+              "refunds_not_enabled",
+              "restricted",
+              "risk_declined",
+              "unknown",
+              null
+            ],
+            "description": "Why it failed, when it did."
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "integer",
+            "description": "A Unix timestamp."
+          }
+        }
+      },
+      "Dispute": {
+        "type": "object",
+        "description": "A customer's challenge to one of your card payments, as you see it. The payment itself never\nchanges: it stays `succeeded`, and the dispute is its own object.\n",
+        "required": [
+          "id",
+          "object",
+          "amount",
+          "currency",
+          "payment_intent",
+          "status",
+          "reason",
+          "network_reason_code",
+          "case_reference",
+          "chargeback_cost",
+          "admin_fee",
+          "cost_returned",
+          "debited",
+          "charged_to",
+          "evidence_due_date",
+          "evidence_request",
+          "livemode",
+          "created",
+          "closed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "dp_0199c3f2a1b47c1e9a20d4b8f35e"
+            ]
+          },
+          "object": {
+            "type": "string",
+            "const": "dispute"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "The amount disputed, in the currency's minor unit: all of the payment, or part of it. It is\ntaken from the funds due to you when the dispute opens, and returned if you win.\n",
+            "examples": [
+              10000
+            ]
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "payment_intent": {
+            "type": "string",
+            "description": "The payment intent disputed.",
+            "examples": [
+              "pi_01j9x2p4d6f8h0k2m4n6q8s0t2"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "under_review",
+              "won",
+              "lost",
+              "accepted"
+            ],
+            "description": "`open` when the chargeback arrives; `under_review` while the operations team work the\ncase; then `won`, `lost` or `accepted`, each final. See [Disputes](https://docs.payments.finfactory.dev/merchant/guides/disputes/).\n"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "fraud",
+              "authorization",
+              "processing_error",
+              "consumer_dispute",
+              "other"
+            ],
+            "description": "What kind of dispute it is, from the network's reason code. `fraud`: the cardholder says\nthey did not make the payment. `authorization`: the payment was not properly authorized.\n`processing_error`: it was processed wrongly, such as charged twice, late or in the wrong\namount. `consumer_dispute`: the customer says what they paid for was not received, not as\ndescribed, or cancelled, or that a refund was not given. `other`: a code not in these.\n"
+          },
+          "network_reason_code": {
+            "type": "string",
+            "description": "The card network's own reason code for the dispute, as it gave it.",
+            "examples": [
+              "10.4"
+            ]
+          },
+          "case_reference": {
+            "type": "string",
+            "description": "The card network's reference for the case. Quote it when you talk to the operations team\nabout the dispute.\n",
+            "examples": [
+              "CB-2026-0001842"
+            ]
+          },
+          "chargeback_cost": {
+            "type": "integer",
+            "description": "What the card provider charges for the chargeback, in the dispute's currency and minor\nunit, taken from the funds due to you with `amount`. `0` when it charges nothing.\n",
+            "examples": [
+              50000
+            ]
+          },
+          "admin_fee": {
+            "type": "integer",
+            "description": "Your platform's own fee for handling a chargeback, if it sets one for the payment method,\ntaken with `amount`. Fixed when the dispute opens. `0` when there is none. It is not\nreturned when you win.\n",
+            "examples": [
+              0
+            ]
+          },
+          "cost_returned": {
+            "type": "integer",
+            "description": "What a won dispute gave back of `chargeback_cost`, in the same minor unit: returned to\nyou with `amount`. `0` until the dispute is `won` and the card provider returns its cost,\nand `0` for one that is `lost` or `accepted`.\n",
+            "examples": [
+              50000
+            ]
+          },
+          "debited": {
+            "type": "integer",
+            "description": "What came off your balance for the chargeback: `amount`, `chargeback_cost` and\n`admin_fee` together. `0` when `charged_to` is `platform`. It stays the same once the\ndispute is decided: what a win returns is `amount` and `cost_returned`. In test mode\nnothing moves, but it says what would have.\n",
+            "examples": [
+              60000
+            ]
+          },
+          "charged_to": {
+            "type": "string",
+            "enum": [
+              "you",
+              "platform"
+            ],
+            "description": "Who bore the chargeback. `you`: it came off your balance, as `debited` says. `platform`:\nthe platform you take payments under bore it, and nothing came off your balance.\n",
+            "examples": [
+              "you"
+            ]
+          },
+          "evidence_due_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The last day to respond with evidence, as a calendar date (`YYYY-MM-DD`) in your\nplatform's time zone. It may be moved while the dispute is worked. `null` until it is\nknown.\n",
+            "examples": [
+              "2026-10-18"
+            ]
+          },
+          "evidence_request": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the operations team asked you to send for the case, if they asked. `null` otherwise.",
+            "examples": [
+              "Proof of delivery signed by the customer",
+              "and the order's invoice."
+            ]
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "integer",
+            "description": "When the dispute opened, as a Unix timestamp.",
+            "examples": [
+              1791446400
+            ]
+          },
+          "closed": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "When it was decided, as a Unix timestamp. `null` while it is `open` or `under_review`."
+          }
+        }
+      },
+      "DisputeEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Event"
+          },
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "object": {
+                    "$ref": "#/components/schemas/Dispute"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "WebhookEndpoint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "we_3f9a1c2b7d4e5f60718293a4"
+            ]
+          },
+          "object": {
+            "type": "string",
+            "const": "webhook_endpoint"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "enabled_events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ]
+          },
+          "secret": {
+            "type": "string",
+            "description": "The signing secret, `whsec_...`. Returned on create and rotate only."
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "created": {
+            "type": "integer",
+            "description": "A Unix timestamp."
+          }
+        }
+      },
+      "OAuthError": {
+        "type": "object",
+        "required": [
+          "error",
+          "error_description"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "enum": [
+              "invalid_request",
+              "invalid_client",
+              "unsupported_grant_type",
+              "rate_limited"
+            ]
+          },
+          "error_description": {
+            "type": "string"
+          }
+        }
+      },
+      "AccessToken": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "const": "Bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Seconds until it expires.",
+            "examples": [
+              900
+            ]
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "type",
+          "created",
+          "api_version",
+          "livemode",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Deduplicate on this; the same event may arrive more than once.",
+            "examples": [
+              "evt_01j9x4b2c3d4e5f6g7h8j9k0m1"
+            ]
+          },
+          "object": {
+            "type": "string",
+            "const": "event"
+          },
+          "type": {
+            "type": "string",
+            "examples": [
+              "payment_intent.succeeded"
+            ]
+          },
+          "created": {
+            "type": "integer",
+            "description": "A Unix timestamp."
+          },
+          "api_version": {
+            "type": "string",
+            "const": "v1"
+          },
+          "livemode": {
+            "type": "boolean"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "merchant_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "object": {
+                "type": "object",
+                "description": "The object as the API shows it, as of this event."
+              }
+            }
+          }
+        }
+      },
+      "Currency": {
+        "type": "string",
+        "pattern": "^[a-z]{3}$",
+        "description": "A three-letter ISO 4217 code, in lower case.",
+        "examples": [
+          "php"
+        ]
+      },
+      "List": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "has_more",
+          "next_cursor"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {}
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pass back as `cursor` for the next page. `null` on the last page."
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "type",
+              "code",
+              "message",
+              "param",
+              "request_id"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "validation_failure",
+                  "authentication_failure",
+                  "authorization_failure",
+                  "not_found",
+                  "conflict",
+                  "timeout_or_in_progress",
+                  "policy_rejection",
+                  "invariant_violation",
+                  "rate_limited",
+                  "dependency_failure"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "description": "A stable name for this refusal. Branch on this, never on `message`."
+              },
+              "message": {
+                "type": "string",
+                "description": "For the developer reading a log. May be reworded."
+              },
+              "param": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The field or parameter at fault, when there is one."
+              },
+              "request_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "The object's id.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "description": "A `next_cursor` from the previous page.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "description": "How many objects to return, from 1 to 100.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "description": "A value unique to this operation, such as your order number and attempt, of 1 to 255\ncharacters. A retry with the same key and body is done at most once; see Idempotency.\n",
+        "schema": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "example": "order-1042-attempt-1"
+      }
+    },
+    "headers": {
+      "RequestId": {
+        "description": "This request's id. Quote it when you contact support.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

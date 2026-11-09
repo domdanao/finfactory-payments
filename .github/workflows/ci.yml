@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22, 24]
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm pack --dry-run
+
+  php:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4']
+    defaults:
+      run:
+        working-directory: php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, json
+          coverage: none
+      - run: composer validate --strict
+      # Composer picks the newest PHPUnit this PHP version supports (10 on 8.1, 11 on 8.2, ...).
+      - run: composer update --no-interaction --no-progress --prefer-dist
+      - run: vendor/bin/phpunit
+
+  spec-drift:
+    # Fails when the published OpenAPI document no longer matches the snapshot the SDKs were built
+    # from, so a new field, endpoint or event is noticed and added to both SDKs.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: curl -fsS https://docs.payments.finfactory.dev/merchant/openapi.json -o /tmp/live.json
+      - run: diff <(jq -S . spec/merchant-openapi.json) <(jq -S . /tmp/live.json)
