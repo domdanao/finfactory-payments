@@ -96,6 +96,15 @@ They are versioned on their own, independently of the SDKs.
 First time only: create the mirror repository `github.com/domdanao/finfactory-qrph-php`, set
 `QRPH_PHP_SPLIT_REPO`, then submit the mirror to Packagist.
 
+## First releases (2026-11-09)
+
+Published by hand from a Mac, not by the release workflow, so without npm provenance:
+npm `@domdanao/finfactory-payments` 0.1.0 and `@domdanao/finfactory-qrph` 0.1.0; Packagist
+`domdanao/finfactory-payments` v0.1.1 and `domdanao/finfactory-qrph` v0.1.0, from the public
+mirrors, which have the Packagist webhook. To release through the workflow later, add
+`NPM_TOKEN` (or set up npm trusted publishing), `PHP_SPLIT_TOKEN` and the `PHP_SPLIT_REPO` /
+`QRPH_PHP_SPLIT_REPO` variables.
+
 ## After a release
 
 - Install it in a clean project and run the quickstart example against a test key.

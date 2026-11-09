@@ -20,6 +20,8 @@ result. Unit tests against a fake server are not listed here.
 | Own QR Ph page (no hosted checkout): create and confirm in one call, render the code, poll status | sample-php | `pi_01a1bf66e61630b752abb42bf78c` | Paid by the simulator from outside the page; the page noticed within one poll and showed "Thank you!" | Claude |
 | Own QR Ph page, **Simulate expiry** button | sample-php | `pi_01a1bf674a1345b11f4a9c7a3054` | `requires_payment_method`; page offers a new code | Claude |
 | **LIVE mode**: own QR Ph page over the tunnel, code drawn by the SDK with the QR Ph logo in the centre, scanned with a real banking app, real ₱5.00 (ATSI web svc) | sample-php | `pi_01a1bf89f02a1084b4ccfafa7739` | Succeeded, ₱5.00 received (checked through the API) | Dom paid; Claude ran the sample and checked |
+| **LIVE mode**: own QR Ph page over the tunnel, code drawn by the JS QR Ph code (the same drawing code since moved to `@domdanao/finfactory-qrph`), scanned with a real banking app, real ₱5.00 (ATSI web svc) | sample-js | `pi_01a1bf93dd99dfa787b66eb0f9f1` | Succeeded, ₱5.00 received (checked through the API) | Dom paid; Claude ran the sample and checked |
+| Installed from the public registries into empty projects: npm `@domdanao/finfactory-payments` 0.1.0 + `@domdanao/finfactory-qrph` 0.1.0; Packagist `domdanao/finfactory-payments` v0.1.1 + `domdanao/finfactory-qrph` v0.1.0. Listed payment intents against the test API, drew a QR Ph SVG, verified a webhook signature | all four | — | Works; Composer archives hold only `src/`, README, CHANGELOG, LICENSE, `composer.json` | Claude |
 
 Problems found on FinFactory's side:
 
