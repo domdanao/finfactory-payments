@@ -52,7 +52,7 @@ use FinFactory\Payments\TokenCache\TokenCache;
  */
 final class FinFactory
 {
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.1.1';
     public const DEFAULT_BASE_URL = 'https://api.payments.finfactory.dev';
 
     private const TOKEN_REFRESH_MARGIN = 60;

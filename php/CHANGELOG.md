@@ -3,9 +3,10 @@
 All notable changes to `domdanao/finfactory-payments` are recorded here. The project follows
 [Semantic Versioning](https://semver.org/).
 
-## 0.1.0 — unreleased
+## 0.1.1 — 2026-11-09
 
-First release, for Merchant API `v1`. An early release: the API of the SDK may change before 1.0.
+First public release, for Merchant API `v1`. (`v0.1.0` was an earlier private tag on the
+mirror, before the helpers below.) An early release: the API of the SDK may change before 1.0.
 
 - Payment intents: create, retrieve, confirm, cancel, list, auto-paginate.
 - Payment methods: list, retrieve.

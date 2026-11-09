@@ -17,7 +17,7 @@ Check, then fill in before publishing:
 
 - [x] The names above. (The PHP namespace stays `FinFactory\Payments`, named for the API.)
 - [x] The license: **MIT**.
-- [ ] Create the repositories the metadata points at: `github.com/domdanao/finfactory-payments`
+- [x] Create the repositories the metadata points at: `github.com/domdanao/finfactory-payments`
       and the PHP mirror `github.com/domdanao/finfactory-payments-php` (or change the URLs in
       `js/package.json` and `php/composer.json`). npm provenance requires `repository` to match the
       repository that publishes.
