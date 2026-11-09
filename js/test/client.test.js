@@ -245,16 +245,39 @@ test("a shared tokenCache is read before fetching a token", async () => {
   assert.equal(fetch.calls.filter((c) => c.url.pathname === "/oauth/token").length, 1);
 });
 
-test("refuses to run in a browser with a secret", () => {
+test("refuses to run in a browser with a secret or an Access Token", () => {
   globalThis.window = {};
   globalThis.document = {};
   try {
     assert.throws(() => client(mockFetch(TOKEN)), /never be sent to a browser/);
+    assert.throws(() => new FinFactory({ accessToken: "at_x", fetch: mockFetch(TOKEN) }), /never be sent to a browser/);
+    assert.throws(() => new FinFactory({ accessToken: () => "at_x", fetch: mockFetch(TOKEN) }), /never be sent to a browser/);
     assert.doesNotThrow(() => client(mockFetch(TOKEN), { dangerouslyAllowBrowser: true }));
   } finally {
     delete globalThis.window;
     delete globalThis.document;
   }
+});
+
+test("refuses to run in a React Native app (Expo included) with a secret or an Access Token", () => {
+  // React Native has a window but no document, so the browser test alone misses it.
+  const had = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  globalThis.window = {};
+  Object.defineProperty(globalThis, "navigator", { value: { product: "ReactNative" }, configurable: true, writable: true });
+  try {
+    assert.throws(() => client(mockFetch(TOKEN)), /never be in a mobile app/);
+    assert.throws(() => new FinFactory({ accessToken: "at_x", fetch: mockFetch(TOKEN) }), /never be in a mobile app/);
+    assert.doesNotThrow(() => client(mockFetch(TOKEN), { dangerouslyAllowBrowser: true }));
+  } finally {
+    delete globalThis.window;
+    if (had) Object.defineProperty(globalThis, "navigator", had);
+    else delete globalThis.navigator;
+  }
+});
+
+test("runs on a server, where navigator is absent or not React Native", () => {
+  assert.doesNotThrow(() => client(mockFetch(TOKEN)));
+  assert.doesNotThrow(() => new FinFactory({ accessToken: "at_x", fetch: mockFetch(TOKEN) }));
 });
 
 test("requires credentials", () => {

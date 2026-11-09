@@ -49,7 +49,7 @@ if (intent.next_action?.type === "redirect_to_url") {
 ## Contents
 
 - [Requirements](#requirements)
-- [Do I need a different package for Node.js, or for the browser?](#do-i-need-a-different-package-for-nodejs-or-for-the-browser)
+- [Do I need a different package for Node.js, the browser or a mobile app?](#do-i-need-a-different-package-for-nodejs-the-browser-or-a-mobile-app)
 - [Configuration](#configuration)
 - [Authentication and Access Tokens](#authentication-and-access-tokens)
 - [Taking a payment](#taking-a-payment)
@@ -93,21 +93,24 @@ if (intent.next_action?.type === "redirect_to_url") {
 The package is ES modules only. `import` works everywhere; `require("@domdanao/finfactory-payments")`
 works on Node.js 20.19+ and 22.12+, which load ES modules from CommonJS.
 
-## Do I need a different package for Node.js, or for the browser?
+## Do I need a different package for Node.js, the browser or a mobile app?
 
 **Node.js: no.** This one package is for every server-side JavaScript runtime. It uses only the
 web-standard `fetch` and `crypto.subtle`, which Node.js, Deno, Bun and edge runtimes all have.
 
-**The browser: you do not use this SDK there, and you should not.** The Merchant API is called
-with your client secret, which must never reach a browser or a mobile app. The SDK refuses to run
-in a browser with a secret. What a browser needs is already provided by the platform:
+**The browser or a mobile app: you do not use this SDK there, and you should not.** The Merchant
+API is called with your client secret, or an Access Token made from it, and neither may reach a
+browser or a mobile app: anyone who opens the page or installs the app can read them, and a token
+can do everything the secret can while it lasts. The SDK refuses to run with either in a browser
+or in a React Native app (Expo included); the app calls your own server, which uses the SDK. What a browser or an app needs is already provided by the platform:
 
 | Where | What to use |
 | --- | --- |
 | Your server | This SDK |
 | Your web page, hosted checkout | Nothing: redirect to `next_action.redirect_to_url.url` |
 | Your web page, embedded checkout | The platform's `embedded-checkout.js`, loaded from your checkout host, with your **publishable key** (`pk_...`) and the intent's **client token** (`ct_...`) |
-| A mobile app | A WebView of your page, as for embedded checkout |
+| A mobile app | A WebView of your page, as for embedded checkout; or your own screens that call your server |
+| A QR Ph code in a page or an app | [`@domdanao/finfactory-qrph`](https://github.com/domdanao/finfactory-payments/tree/main/qrph-js), with the payload your server returns |
 
 ## Configuration
 
@@ -125,14 +128,14 @@ const finfactory = new FinFactory({
 | --- | --- | --- |
 | `clientId` | `FINFACTORY_CLIENT_ID` env | `ci_test_...` or `ci_live_...` |
 | `clientSecret` | `FINFACTORY_CLIENT_SECRET` env | `sk_test_...` or `sk_live_...`. Keep it in your secret store. |
-| `accessToken` | none | A token you manage yourself (a string, or a function returning one), instead of `clientId`/`clientSecret`. |
+| `accessToken` | none | A token you manage yourself (a string, or a function returning one), instead of `clientId`/`clientSecret`. Server-side only, like the secret. |
 | `baseUrl` | `FINFACTORY_BASE_URL` env, then `https://api.payments.finfactory.dev` | Your platform's API host, if it gave you another. |
 | `timeout` | `30000` | Milliseconds per attempt. |
 | `maxRetries` | `2` | See [Idempotency and retries](#idempotency-and-retries). |
 | `tokenCache` | in memory | Share Access Tokens between processes. See below. |
 | `fetch` | `globalThis.fetch` | A custom `fetch`, for a proxy or for tests. |
 | `defaultHeaders` | `{}` | Headers sent on every request. |
-| `dangerouslyAllowBrowser` | `false` | Lets the client be built in a browser. Only for test harnesses. |
+| `dangerouslyAllowBrowser` | `false` | Lets the client be built with a secret or an Access Token in a browser or a React Native app. Only for test harnesses. |
 
 With the environment variables set, `new FinFactory()` needs no arguments.
 

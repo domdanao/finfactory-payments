@@ -58,8 +58,9 @@ export interface ClientOptions {
   /** Headers sent on every request. */
   defaultHeaders?: Record<string, string>;
   /**
-   * This SDK holds your client secret, which must never reach a browser. It refuses to run in one
-   * unless you set this, for example in a test harness.
+   * This SDK holds your client secret or an Access Token, which must never reach a browser or a
+   * mobile app, where anyone can read them. It refuses to run in a browser or a React Native app
+   * (Expo included) unless you set this, for example in a test harness.
    */
   dangerouslyAllowBrowser?: boolean;
 }
@@ -101,9 +102,16 @@ function env(name: string): string | undefined {
   return proc?.env?.[name] || undefined;
 }
 
-function isBrowser(): boolean {
-  const g = globalThis as { window?: unknown; document?: unknown };
-  return typeof g.window !== "undefined" && typeof g.document !== "undefined";
+/**
+ * Where a client secret would be in the hands of the people using it: a browser, or a React
+ * Native app (Expo included). React Native has a `window` but no `document`, so it needs its own
+ * test: it sets `navigator.product` to "ReactNative" (browsers say "Gecko"; servers set nothing).
+ */
+function clientSide(): "browser" | "react-native" | null {
+  const g = globalThis as { window?: unknown; document?: unknown; navigator?: { product?: unknown } };
+  if (g.navigator?.product === "ReactNative") return "react-native";
+  if (typeof g.window !== "undefined" && typeof g.document !== "undefined") return "browser";
+  return null;
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -184,10 +192,20 @@ export class FinFactory {
         "FinFactory: give a clientId and clientSecret (or set FINFACTORY_CLIENT_ID and FINFACTORY_CLIENT_SECRET), or an accessToken.",
       );
     }
-    if (this.clientSecret && isBrowser() && !options.dangerouslyAllowBrowser) {
+    // An Access Token is as powerful as the secret while it lasts, so neither may be where the
+    // people using the page or the app could read it.
+    const credentials = Boolean(this.clientSecret || this.staticToken);
+    const where = credentials && !options.dangerouslyAllowBrowser ? clientSide() : null;
+    if (where === "browser") {
       throw new FinFactoryError(
-        "FinFactory: this SDK is for your server. Your client secret must never be sent to a browser. " +
+        "FinFactory: this SDK is for your server. Your client secret and Access Tokens must never be sent to a browser. " +
           "In the browser, use embedded checkout with a publishable key and a client token instead.",
+      );
+    }
+    if (where === "react-native") {
+      throw new FinFactoryError(
+        "FinFactory: this SDK is for your server. Your client secret and Access Tokens must never be in a mobile app: " +
+          "anyone who installs the app can read them. Have the app call your own server, which uses this SDK.",
       );
     }
 

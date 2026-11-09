@@ -21,4 +21,6 @@ First release, for Merchant API `v1`. An early release: the API of the SDK may c
   `hasMore()`, `nextCursor()`, `dataObject()`. The same as the PHP SDK's, which pass the same
   shared cases.
 - Drawing QR Ph codes is in the separate package `@domdanao/finfactory-qrph`.
+- Refuses to be built with a client secret or an Access Token in a browser or a React Native app
+  (Expo included), where anyone could read them, unless `dangerouslyAllowBrowser` is set.
 - Zero runtime dependencies; Node.js 20.19+, Deno, Bun, Cloudflare Workers.

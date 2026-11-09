@@ -199,7 +199,7 @@ What one language has and another can't, or names differently. Nothing else may 
 | Live or test key | `finfactory.livemode` (getter) | `$finfactory->isLivemode()` |
 | Custom transport | `fetch` option | `http_client` option (an `HttpClient`) |
 | Cancelling a call | `signal` per-call option | none: PHP has no cancellation |
-| Refuse to run in a browser | yes, unless `dangerouslyAllowBrowser` | not applicable |
+| Refuse to run with a secret or an Access Token where users could read them | in a browser, or a React Native app (Expo included), unless `dangerouslyAllowBrowser` | not applicable: PHP doesn't run in browsers or apps |
 | Shared token caches | the `TokenCache` interface | the interface, plus `ApcuTokenCache` and `Psr16TokenCache` for PHP's per-request processes |
 | Webhook raw body | string, `Uint8Array` or `ArrayBuffer` | string (PHP strings are bytes) |
 | Helpers | functions: `redirectUrl(intent)` | methods: `$intent->redirectUrl()` |
