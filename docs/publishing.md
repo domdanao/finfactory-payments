@@ -1,6 +1,8 @@
 # Publishing
 
-How to release `@domdanao/finfactory-payments` to npm and `domdanao/finfactory-payments` to Packagist.
+How to release the SDKs, `@domdanao/finfactory-payments` to npm and
+`domdanao/finfactory-payments` to Packagist, and the QR Ph packages, `@domdanao/finfactory-qrph`
+and `domdanao/finfactory-qrph`.
 
 ## Before the first release: decisions and accounts
 
@@ -27,8 +29,10 @@ Check, then fill in before publishing:
 This repository holds both SDKs:
 
 ```text
-js/      → npm: @domdanao/finfactory-payments
-php/     → mirrored to its own repository (e.g. github.com/domdanao/finfactory-payments-php) → Packagist
+js/       → npm: @domdanao/finfactory-payments
+php/      → mirrored to its own repository (e.g. github.com/domdanao/finfactory-payments-php) → Packagist
+qrph-js/  → npm: @domdanao/finfactory-qrph
+qrph-php/ → mirrored to github.com/domdanao/finfactory-qrph-php → Packagist
 spec/    → the OpenAPI snapshot both were built from
 docs/    → this file and the SDK design contract
 ```
@@ -76,6 +80,21 @@ release. Step 4 can't push a tag that already exists, so the first Packagist rel
 to Packagist without tagging.
 
 `.gitattributes` keeps `tests/`, `examples/` and tooling out of the archive Composer downloads.
+
+## Releasing the QR Ph packages
+
+They are versioned on their own, independently of the SDKs.
+
+- **JavaScript:** update `version` in `qrph-js/package.json` and `VERSION` in
+  `qrph-js/src/index.ts`, and the changelog. Tag `qrph-js-v0.1.0`; the release workflow publishes
+  it to npm.
+- **PHP:** update `VERSION` in `qrph-php/src/QrPh.php`, and the changelog. Tag
+  `qrph-php-v0.1.0`; the release workflow pushes `qrph-php/` to the mirror in
+  `vars.QRPH_PHP_SPLIT_REPO` (e.g. `domdanao/finfactory-qrph-php`, with the same
+  `secrets.PHP_SPLIT_TOKEN`) and tags it `v0.1.0`.
+
+First time only: create the mirror repository `github.com/domdanao/finfactory-qrph-php`, set
+`QRPH_PHP_SPLIT_REPO`, then submit the mirror to Packagist.
 
 ## After a release
 

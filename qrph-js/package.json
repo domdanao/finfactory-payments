@@ -1,0 +1,60 @@
+{
+  "name": "@domdanao/finfactory-qrph",
+  "version": "0.1.0",
+  "description": "Draw QR Ph codes as SVG, with the QR Ph logo in the centre. Any QR Ph payload: from FinFactory Payments or any other provider. Node.js, Deno, Bun, Workers and browsers.",
+  "keywords": [
+    "qrph",
+    "qr ph",
+    "qr code",
+    "svg",
+    "philippines",
+    "payments",
+    "finfactory"
+  ],
+  "license": "MIT",
+  "author": "Dominick Danao",
+  "homepage": "https://github.com/domdanao/finfactory-payments/tree/main/qrph-js#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/domdanao/finfactory-payments.git",
+    "directory": "qrph-js"
+  },
+  "bugs": {
+    "url": "https://github.com/domdanao/finfactory-payments/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.js",
+    "prepublishOnly": "npm test"
+  },
+  "dependencies": {
+    "qrcode-generator": "^2.0.4"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

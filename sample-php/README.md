@@ -1,6 +1,6 @@
-# Acacia 15 SVC: PHP sample
+# ATSI web svc: PHP sample
 
-A one-page web site that charges a payer ₱25.00 for **Acacia 15 SVC** by **QR Ph on its own
+A one-page web site that charges a payer ₱5.00 for **ATSI web svc** by **QR Ph on its own
 page**, using [`domdanao/finfactory-payments`](../php). The payer never leaves the site: it asks
 the API for the QR payload, draws the code itself and watches for the payment. Plain PHP, no
 framework: one front controller in [`public/index.php`](public/index.php).
@@ -19,7 +19,7 @@ composer install
 composer serve          # php -S localhost:8000 -t public public/index.php
 ```
 
-Open <http://acacia.localhost:8000> and click **Pay ₱25.00 with QR Ph**. In test mode the code
+Open <http://acacia.localhost:8000> and click **Pay ₱5.00 with QR Ph**. In test mode the code
 is a placeholder no banking app can scan; use the **Simulate payment** and **Simulate expiry**
 buttons under it.
 
@@ -32,22 +32,20 @@ buttons under it.
 
 ## What happens
 
-1. **`GET /`** shows the product and a **Pay ₱25.00 with QR Ph** button. It's a `POST` form
+1. **`GET /`** shows the product and a **Pay ₱5.00 with QR Ph** button. It's a `POST` form
    carrying a random attempt id, so prefetchers and crawlers can't create payments.
 2. **`POST /qrph`** creates the payment intent with `payment_method_data[type] = qrph` and
    `confirm = true`, in one call. The attempt id is the idempotency key, so a double click gets
    the same payment back instead of a second one. It redirects to the QR page, so reloading
    doesn't post again.
 3. **`GET /qrph?payment_intent=pi_...`** retrieves the intent and draws
-   `next_action->qrph_display_qr_code->data` as an SVG QR code (with
-   [`chillerlan/php-qrcode`](https://github.com/chillerlan/php-qrcode)), with the amount and a
+   `next_action->qrph_display_qr_code->data` as an SVG QR code, with the amount and a
    countdown to `expires_at` (30 minutes). The QR Ph logo ([`assets/qrph-logo.png`](assets/qrph-logo.png))
    sits in the middle, as the BSP asks of merchant (P2M) codes: they "feature the QR Ph logo at
    the center of the QR code"
    ([QR Ph Rebranding FAQ](https://www.bsp.gov.ph/Media_And_Research/Primers%20Faqs/FAQs-QR-Ph-Rebranding.pdf),
-   item 4). The SDK draws it: `$intent->qrphSvg(['logo' => ['data' => ..., 'type' => 'image/png']])`, which needs
-   `chillerlan/php-qrcode`; see
-   [Drawing the QR Ph code](../php/README.md#drawing-the-qr-ph-code). An expired or canceled intent gets a **Get a new QR
+   item 4). The separate package [`domdanao/finfactory-qrph`](../qrph-php) draws it:
+   `QrPh::svg($intent, ['logo' => ['data' => ..., 'type' => 'image/png']])`. An expired or canceled intent gets a **Get a new QR
    code** button instead.
 4. The page's script asks **`GET /qrph/status`** for the intent's status every 3 seconds. When
    it's `succeeded` or `processing`, the payer goes to **`/return`**, which retrieves the intent
@@ -89,12 +87,21 @@ Keep `.env` and `vendor/` outside the document root, as they are here.
 - **For the hosted checkout link, use HTTPS.** Live mode accepts only `https` return and cancel
   URLs, so `PUBLIC_URL` must be an `https` address.
 
-## Using the SDK from outside this repository
+## Using the packages from outside this repository
 
-This sample installs the SDK from the folder next to it, with a Composer `path` repository. In
-another project, use the private mirror instead:
+This sample installs the SDK and `finfactory-qrph` from the folders next to it, with Composer
+`path` repositories. In another project, use the private mirrors instead:
 
 ```json
-"repositories": [{ "type": "vcs", "url": "https://github.com/domdanao/finfactory-payments-php" }],
-"require": { "domdanao/finfactory-payments": "^0.1" }
+"repositories": [
+    { "type": "vcs", "url": "https://github.com/domdanao/finfactory-payments-php" },
+    { "type": "vcs", "url": "https://github.com/domdanao/finfactory-qrph-php" }
+],
+"require": {
+    "domdanao/finfactory-payments": "^0.1",
+    "domdanao/finfactory-qrph": "^0.1"
+}
 ```
+
+The QR Ph mirror doesn't exist until its first release; see
+[publishing](../docs/publishing.md#releasing-the-qr-ph-packages).

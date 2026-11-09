@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4ddc6cd7759d8856c683d19ef90fb2f8",
+    "content-hash": "4b73e3b6c2d26564bd3e2ae7f4331706",
     "packages": [
         {
             "name": "chillerlan/php-qrcode",
@@ -225,13 +225,66 @@
             "transport-options": {
                 "relative": true
             }
+        },
+        {
+            "name": "domdanao/finfactory-qrph",
+            "version": "dev-main",
+            "dist": {
+                "type": "path",
+                "url": "../qrph-php",
+                "reference": "b973437da965469ab21c2a104d1235065d4e8ef4"
+            },
+            "require": {
+                "chillerlan/php-qrcode": "^5.0",
+                "php": ">=8.1"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0 || ^13.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "FinFactory\\QrPh\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "FinFactory\\QrPh\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Draw QR Ph codes as SVG, with the QR Ph logo in the centre. Any QR Ph payload: from FinFactory Payments or any other provider.",
+            "homepage": "https://github.com/domdanao/finfactory-payments/tree/main/qrph-php",
+            "keywords": [
+                "finfactory",
+                "payments",
+                "philippines",
+                "qr code",
+                "qrph",
+                "svg"
+            ],
+            "support": {
+                "issues": "https://github.com/domdanao/finfactory-payments/issues",
+                "source": "https://github.com/domdanao/finfactory-qrph-php"
+            },
+            "transport-options": {
+                "relative": true
+            }
         }
     ],
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "domdanao/finfactory-payments": 20
+        "domdanao/finfactory-payments": 20,
+        "domdanao/finfactory-qrph": 20
     },
     "prefer-stable": false,
     "prefer-lowest": false,

@@ -1,8 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import qrcode from "qrcode-generator";
-import { qrphSvg, logoModules } from "../dist/qrph.js";
-import { qrphData, qrphExpiresAt } from "../dist/index.js";
+import { qrphSvg, logoModules, VERSION } from "../dist/index.js";
 
 // Shaped like a real QR Ph payload (EMVCo), 197 characters.
 const PAYLOAD =
@@ -56,11 +55,8 @@ test("draws every dark module of a level-H code, with the margin", () => {
 
 test("takes the payload from a payment intent, or gives null", () => {
   assert.equal(qrphSvg(QR_INTENT), qrphSvg(PAYLOAD));
-  assert.equal(qrphData(QR_INTENT), PAYLOAD);
-  assert.equal(qrphExpiresAt(QR_INTENT), 1794214000);
   const card = intent({ type: "redirect_to_url", redirect_to_url: { url: "https://example.test" } });
   assert.equal(qrphSvg(card), null);
-  assert.equal(qrphData(card), null);
   assert.equal(qrphSvg(intent(null)), null);
 });
 
@@ -107,9 +103,19 @@ test("refuses an empty payload or a bad margin", () => {
   assert.throws(() => qrphSvg(PAYLOAD, { logo: "" }), TypeError);
 });
 
-test("the main entry point doesn't load the QR library", async () => {
+test("stands alone: no FinFactory SDK, keys or network", async () => {
   const { readFile } = await import("node:fs/promises");
-  for (const file of ["index.js", "client.js", "resources.js", "types.js", "webhooks.js", "errors.js"]) {
-    assert.doesNotMatch(await readFile(new URL(`../dist/${file}`, import.meta.url), "utf8"), /qrcode-generator|qrph\.js/, file);
-  }
+  const code = await readFile(new URL("../dist/index.js", import.meta.url), "utf8");
+  assert.doesNotMatch(code, /finfactory-payments|fetch\(|process\.env/);
+  const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.deepEqual(Object.keys(pkg.dependencies), ["qrcode-generator"]);
+  assert.equal(pkg.version, VERSION);
+});
+
+test("draws another provider's QR Ph payload, given as text", () => {
+  // Any QR Ph payload works; this one is shaped like a P2M code from a different acquirer.
+  const other = "00020101021228600011ph.ppmi.p2m0111OTHRPHM1XXX0315777000111222333504160000000000000000520459995303608540510.005802PH5910OTHER SHOP6006MANILA63041A2B";
+  const svg = qrphSvg(other, { logo: "/img/qrph-logo.png" });
+  assert.match(svg, /^<svg /);
+  assert.match(svg, /href="\/img\/qrph-logo.png"/);
 });

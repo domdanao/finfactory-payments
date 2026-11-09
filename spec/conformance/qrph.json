@@ -1,0 +1,81 @@
+{
+  "description": "Cases every finfactory-qrph package must pass. Each one's tests read this file. See docs/sdk-design.md, QR Ph package.",
+  "payload": "00020101021228760011ph.ppmi.p2m0111ABCDPHM1XXX03150000123456789010415ABCDEF1234567890503031520400005303608540425005802PH5913ACACIA STORE 6011MANDALUYONG62310010ph.ppmi.p2m0513REF01A1BF6674A6304ABCD",
+  "intent": {
+    "id": "pi_3",
+    "object": "payment_intent",
+    "status": "requires_action",
+    "next_action": {
+      "type": "qrph_display_qr_code",
+      "qrph_display_qr_code": {
+        "data": "00020101021228760011ph.ppmi.p2m0111ABCDPHM1XXX03150000123456789010415ABCDEF1234567890503031520400005303608540425005802PH5913ACACIA STORE 6011MANDALUYONG62310010ph.ppmi.p2m0513REF01A1BF6674A6304ABCD",
+        "expires_at": 1794214000
+      }
+    }
+  },
+  "not_qrph_intents": [
+    {
+      "id": "pi_6",
+      "object": "payment_intent",
+      "status": "succeeded",
+      "next_action": null
+    },
+    {
+      "id": "pi_1",
+      "object": "payment_intent",
+      "status": "requires_action",
+      "next_action": {
+        "type": "redirect_to_url",
+        "redirect_to_url": {
+          "url": "https://checkout.example.test/pay/x"
+        }
+      }
+    }
+  ],
+  "logo_modules": {
+    "21": 7,
+    "37": 9,
+    "77": 19,
+    "177": 43
+  },
+  "logo_bytes_base64": "iVBORwD/",
+  "logo_type": "image/png",
+  "expect_viewbox_size_margin_4": 85,
+  "bad_options": [
+    {
+      "name": "negative margin",
+      "options": {
+        "margin": -1
+      }
+    },
+    {
+      "name": "fractional margin",
+      "options": {
+        "margin": 1.5
+      }
+    },
+    {
+      "name": "empty logo",
+      "options": {
+        "logo": ""
+      }
+    },
+    {
+      "name": "logo without type",
+      "options": {
+        "logo": {
+          "data_base64": "iVBORwD/"
+        }
+      }
+    },
+    {
+      "name": "logo with empty bytes",
+      "options": {
+        "logo": {
+          "data_base64": "",
+          "type": "image/png"
+        }
+      }
+    }
+  ]
+}

@@ -17,10 +17,8 @@ First release, for Merchant API `v1`. An early release: the API of the SDK may c
 - Automatic `Idempotency-Key`, reused across retries; safe retries with backoff and `Retry-After`.
 - Typed errors for every error type; `OAuthError`, `ConnectionError`, `TimeoutError`.
 - Webhook signature verification with Web Crypto, including secret rotation.
-- `qrphSvg()` in `@domdanao/finfactory-payments/qrph`: draw a QR Ph code as SVG, with the QR Ph
-  logo in the middle, at error correction level H. That entry point needs `qrcode-generator` (an
-  optional peer dependency); the main one has none.
 - Helpers: `redirectUrl()`, `clientToken()`, `qrphData()`, `qrphExpiresAt()`, `isSucceeded()`,
   `hasMore()`, `nextCursor()`, `dataObject()`. The same as the PHP SDK's, which pass the same
   shared cases.
+- Drawing QR Ph codes is in the separate package `@domdanao/finfactory-qrph`.
 - Zero runtime dependencies; Node.js 20.19+, Deno, Bun, Cloudflare Workers.

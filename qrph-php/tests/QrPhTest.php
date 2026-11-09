@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace FinFactory\Payments\Tests;
+namespace FinFactory\QrPh\Tests;
 
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
-use FinFactory\Payments\QrPh;
-use FinFactory\Payments\Resource\PaymentIntent;
+use FinFactory\QrPh\QrPh;
 use PHPUnit\Framework\TestCase;
 
 final class QrPhTest extends TestCase
@@ -109,20 +108,33 @@ final class QrPhTest extends TestCase
         self::assertStringNotContainsString('<script', $svg);
     }
 
-    public function testFromAPaymentIntent(): void
+    public function testFromAPaymentIntentAsArrayOrObject(): void
     {
-        $intent = PaymentIntent::constructFrom(self::intent(['type' => 'qrph_display_qr_code', 'qrph_display_qr_code' => ['data' => self::PAYLOAD, 'expires_at' => 1794214000]]));
-        self::assertSame(self::PAYLOAD, $intent->qrphData());
-        self::assertSame(1794214000, $intent->qrphExpiresAt());
-        self::assertSame(QrPh::svg(self::PAYLOAD), $intent->qrphSvg());
-        self::assertSame($intent->qrphSvg(), QrPh::svg($intent));
+        $qr = self::intent(['type' => 'qrph_display_qr_code', 'qrph_display_qr_code' => ['data' => self::PAYLOAD, 'expires_at' => 1794214000]]);
+        self::assertSame(QrPh::svg(self::PAYLOAD), QrPh::svg($qr));
+        self::assertSame(QrPh::svg(self::PAYLOAD), QrPh::svg(json_decode((string) json_encode($qr)))); // stdClass
 
-        $card = PaymentIntent::constructFrom(self::intent(['type' => 'redirect_to_url', 'redirect_to_url' => ['url' => 'https://example.test']]));
-        self::assertNull($card->qrphData());
-        self::assertNull($card->qrphExpiresAt());
-        self::assertNull($card->qrphSvg());
+        $card = self::intent(['type' => 'redirect_to_url', 'redirect_to_url' => ['url' => 'https://example.test']]);
         self::assertNull(QrPh::svg($card));
-        self::assertNull(PaymentIntent::constructFrom(self::intent(null))->qrphSvg());
+        self::assertNull(QrPh::svg(self::intent(null)));
+        self::assertNull(QrPh::svg(new \stdClass()));
+    }
+
+    public function testStandsAlone(): void
+    {
+        $code = (string) file_get_contents(__DIR__ . '/../src/QrPh.php');
+        self::assertDoesNotMatchRegularExpression('/FinFactory\\\\Payments|curl_|getenv/', $code);
+        $composer = json_decode((string) file_get_contents(__DIR__ . '/../composer.json'), true);
+        self::assertSame(['php', 'chillerlan/php-qrcode'], array_keys($composer['require']));
+    }
+
+    public function testDrawsAnotherProvidersPayload(): void
+    {
+        // Any QR Ph payload works; this one is shaped like a P2M code from a different acquirer.
+        $other = '00020101021228600011ph.ppmi.p2m0111OTHRPHM1XXX0315777000111222333504160000000000000000520459995303608540510.005802PH5910OTHER SHOP6006MANILA63041A2B';
+        $svg = (string) QrPh::svg($other, ['logo' => '/img/qrph-logo.png']);
+        self::assertStringContainsString('href="/img/qrph-logo.png"', $svg);
+        self::assertSame($other, self::scan($svg));
     }
 
     /** @return iterable<string, array{0: string, 1: array<string, mixed>}> */

@@ -281,7 +281,7 @@ const confirmed = await finfactory.paymentIntents.confirm(
 switch (confirmed.next_action?.type) {
   case "qrph_display_qr_code":
     // Render as a QR code; show how long it has left.
-    showQr(qrphData(confirmed), qrphExpiresAt(confirmed)); // or draw it: see below
+    showQr(qrphData(confirmed), qrphExpiresAt(confirmed)); // draw it: see below
     break;
   case "cash_display_reference":
     showCashReference(confirmed.next_action.cash_display_reference);
@@ -300,44 +300,26 @@ Create and confirm in one call with `confirm: true` and `payment_method_data`. F
 
 ### Drawing the QR Ph code
 
-The SDK can draw the code for you as SVG, with the QR Ph logo in the middle. The BSP asks that
-merchant (P2M) QR Ph codes show the logo there ([QR Ph Rebranding FAQ](https://www.bsp.gov.ph/Media_And_Research/Primers%20Faqs/FAQs-QR-Ph-Rebranding.pdf), item 4).
-It lives in its own entry point, `@domdanao/finfactory-payments/qrph`, with one dependency the
-rest of the SDK does not have:
+The SDK gives you the payload (`qrphData(intent)`). To draw it as a QR code with the QR Ph logo in
+the centre, as the BSP asks of merchant codes, use the separate package
+[`@domdanao/finfactory-qrph`](https://github.com/domdanao/finfactory-payments/tree/main/qrph-js):
 
 ```sh
-npm install qrcode-generator
+npm install @domdanao/finfactory-qrph
 ```
 
 ```ts
-import { readFile } from "node:fs/promises";
 import { qrphExpiresAt } from "@domdanao/finfactory-payments";
-import { qrphSvg } from "@domdanao/finfactory-payments/qrph";
-
-const logo = { data: await readFile("qrph-logo.png"), type: "image/png" };
+import { qrphSvg } from "@domdanao/finfactory-qrph";
 
 const svg = qrphSvg(intent, { logo });     // null unless waiting for QR Ph
-const expiresAt = qrphExpiresAt(intent);   // Unix timestamp, for a countdown
-
-const html = `<div style="width: 280px">${svg}</div>`;
+const expiresAt = qrphExpiresAt(intent);   // for a countdown
 ```
 
-The SDK does not include the logo: it is the BSP's mark, so get the image from your acquirer or
-the BSP. The modules under the logo are cleared and the code uses error correction level H, so
-banking apps read it past the logo. Without a logo, the code is drawn whole.
-
-| Option | Default | |
-| --- | --- | --- |
-| `logo` | none | A URL or `data:` URI, used as it is; or `{ data, type }` with `data` a `Uint8Array` or `ArrayBuffer`, embedded |
-| `margin` | `4` | Light border around the code, in modules |
-| `foreground`, `background` | `#000`, `#fff` | Colours. Keep the code dark on light |
-| `title` | `QR Ph code` | Accessible name of the image |
-
-The SVG scales to its container; show it at 250px or more across. `qrphSvg(payload, options)` draws a payload
-you already have. While the code is showing, check the intent's status every few seconds (from
-your page, through your server) to move on once it is paid, and fulfil from the
-`payment_intent.succeeded` webhook. A runnable page in PHP is in
-[`sample-php`](https://github.com/domdanao/finfactory-payments/tree/main/sample-php).
+It is separate so the SDK keeps no dependencies, and so it can draw any QR Ph payload, from
+FinFactory or another provider, without the SDK. While the code is showing, check the intent's
+status every few seconds (from your page, through your server) to move on once it is paid, and
+fulfil from the `payment_intent.succeeded` webhook.
 
 ### Cash
 
@@ -766,7 +748,6 @@ because the API adds values inside `v1`. Handle the values you know and ignore t
 | `testHelpers.paymentIntents.simulate(id, params, options?)` | `POST /v1/test_helpers/payment_intents/{id}/simulate` |
 | `accessTokens.create(options?)` | `POST /oauth/token` |
 | `Webhooks.constructEvent / verify / isValid / generateTestHeader` | — |
-| `qrphSvg(intentOrPayload, options?)` from `@domdanao/finfactory-payments/qrph` | — (draws locally) |
 | `redirectUrl`, `clientToken`, `qrphData`, `qrphExpiresAt`, `isSucceeded`, `hasMore`, `nextCursor`, `dataObject` | — (read a result) |
 
 Every parameter and field is described in the

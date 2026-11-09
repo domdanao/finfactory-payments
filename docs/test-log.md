@@ -19,6 +19,7 @@ result. Unit tests against a fake server are not listed here.
 | **LIVE mode**: hosted checkout over the tunnel, **card**, real ₱25.00 | sample-php | `pi_01a1bf13221f117ca580cf7b0ec7` | Succeeded (checked through the API) | Dom paid; Claude ran the sample and checked |
 | Own QR Ph page (no hosted checkout): create and confirm in one call, render the code, poll status | sample-php | `pi_01a1bf66e61630b752abb42bf78c` | Paid by the simulator from outside the page; the page noticed within one poll and showed "Thank you!" | Claude |
 | Own QR Ph page, **Simulate expiry** button | sample-php | `pi_01a1bf674a1345b11f4a9c7a3054` | `requires_payment_method`; page offers a new code | Claude |
+| **LIVE mode**: own QR Ph page over the tunnel, code drawn by the SDK with the QR Ph logo in the centre, scanned with a real banking app, real ₱5.00 (ATSI web svc) | sample-php | `pi_01a1bf89f02a1084b4ccfafa7739` | Succeeded, ₱5.00 received (checked through the API) | Dom paid; Claude ran the sample and checked |
 
 Problems found on FinFactory's side:
 
@@ -38,6 +39,5 @@ Local setup:
 
 ## Not yet run against the API
 
-- Refunds, disputes, webhook endpoints and the payment simulator, called from code
+- Refunds, disputes and webhook endpoints, called from code
 - Webhook signature check on a real event
-- Own QR Ph page in live mode, scanned with a real banking app

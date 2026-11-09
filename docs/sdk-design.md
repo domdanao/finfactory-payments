@@ -19,8 +19,8 @@ The source of truth is the Merchant API's OpenAPI document, snapshotted in
 
 1. **No runtime dependencies** beyond the language's standard library, or the one HTTP extension
    everybody has (PHP's ext-curl). An SDK for payments is a supply-chain target: every dependency
-   is one more thing to audit. The one exception is drawing QR Ph codes, which needs a QR
-   encoder: it is optional, and nothing else loads it (see [QR Ph codes](#qr-ph-codes)).
+   is one more thing to audit. Drawing QR Ph codes needs a QR encoder, so it lives in a separate
+   package (see [The QR Ph package](#the-qr-ph-package)).
 2. **Forward compatible.** The API adds fields, enum values, `next_action` types and event types
    inside `v1`. Never fail on an unknown field or value; expose unknown fields as they came.
 3. **Thin.** The SDK sends what you give it and returns what the API answers. No client-side
@@ -159,27 +159,36 @@ they are functions taking the result. Same names, same answers:
 
 Cases: [`spec/conformance/helpers.json`](../spec/conformance/helpers.json).
 
-## QR Ph codes
+## The QR Ph package
 
-`qrphSvg(intentOrPayload, options)` draws a QR Ph code as an SVG string: null for an intent not
-waiting for a QR Ph payment. PHP: `QrPh::svg(...)`, and `$intent->qrphSvg($options)`. JS: from
-the separate entry point `@domdanao/finfactory-payments/qrph`, so the main one never loads the
-encoder.
+Drawing a QR Ph code is not part of the SDKs. It is a separate package per language,
+`finfactory-qrph` (npm `@domdanao/finfactory-qrph`, Composer `domdanao/finfactory-qrph`), so:
 
-- Encoder: an optional dependency (PHP `chillerlan/php-qrcode` 5, JS `qrcode-generator` 2),
-  byte mode, error correction level **H**.
+- the SDKs keep no dependencies, and merchants who only use hosted checkout install nothing extra;
+- it works with any QR Ph payload, from FinFactory or any other provider, without the SDK;
+- it holds no secret and makes no network calls, so the JavaScript one can also run in a browser.
+
+It does not depend on the SDK. It reads a FinFactory payment intent by shape:
+`next_action.qrph_display_qr_code.data` when `next_action.type` is `qrph_display_qr_code`.
+
+`qrphSvg(intentOrPayload, options)` (PHP `QrPh::svg(...)`) returns an SVG string, or null for an
+intent not waiting for a QR Ph payment. `logoModules(n)` is public.
+
+- Encoder: the package's one dependency (PHP `chillerlan/php-qrcode` 5, JS `qrcode-generator`
+  2), byte mode, error correction level **H**.
 - Options: `logo` (a URL or `data:` URI used as the image's `href`, or `{data: bytes, type}`
   embedded as a `data:` URI), `margin` in modules (default 4), `foreground` (`#000`),
   `background` (`#fff`), `title` (`QR Ph code`). Attribute values are escaped.
 - With a logo: clear an odd square of `logoModules(n)` modules in the centre,
   `max(7, round(n × 0.25))` made odd, and draw the logo one module inside it. The BSP asks that
-  merchant (P2M) codes carry the QR Ph logo in the centre. The SDKs don't ship the logo, which is
-  the BSP's mark.
+  merchant (P2M) codes carry the QR Ph logo in the centre. The package doesn't ship the logo,
+  which is the BSP's mark.
 - Output: one `<path>` of dark-module runs on a background `<rect>`, `viewBox` in modules,
   `shape-rendering="crispEdges"`, `role="img"` with the title.
 - Refuse an empty payload, a margin that isn't a whole number ≥ 0, and a malformed logo.
 
-Every SDK's tests decode what it draws, with and without a logo, at a real QR Ph length.
+Every package's tests decode what it draws, with and without a logo, at a real QR Ph length,
+and run the cases in [`spec/conformance/qrph.json`](../spec/conformance/qrph.json).
 
 ## Language differences
 
@@ -235,7 +244,6 @@ Against a fake transport, no network:
 14. Webhook conformance vector; tampered body, wrong secret, old timestamp, malformed header;
     rotation with two secrets.
 15. Every case in [`spec/conformance/helpers.json`](../spec/conformance/helpers.json).
-16. QR Ph codes decode back to their payload, with the centre cleared for a logo.
 
 ## Versioning the SDKs
 

@@ -35,6 +35,20 @@
       "port": 8000
     },
     {
+      "name": "sample-php-live",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "ENV_FILE=.env.live",
+        "php",
+        "-S",
+        "localhost:8000",
+        "-t",
+        "sample-php/public",
+        "sample-php/public/index.php"
+      ],
+      "port": 8000
+    },
+    {
       "name": "sample-php-live-tunnel",
       "runtimeExecutable": "env",
       "runtimeArgs": [

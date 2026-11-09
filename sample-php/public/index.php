@@ -1,6 +1,6 @@
 <?php
 
-// Acacia 15 SVC: a one-page site that takes payment by QR Ph on its own page, through the
+// ATSI web svc: a one-page site that takes payment by QR Ph on its own page, through the
 // FinFactory API. (FinFactory's hosted checkout is still reachable at /pay, for other methods.)
 //
 //   cp .env.example .env    # then fill in a test key
@@ -16,12 +16,13 @@ use FinFactory\Payments\Exception\FinFactoryException;
 use FinFactory\Payments\FinFactory;
 use FinFactory\Payments\Resource\PaymentIntent;
 use FinFactory\Payments\TokenCache\ApcuTokenCache;
+use FinFactory\QrPh\QrPh;
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../src/FileTokenCache.php';
 
-const PRODUCT_NAME = 'Acacia 15 SVC';
-const PRODUCT_AMOUNT = 2500; // in centavos: ₱25.00
+const PRODUCT_NAME = 'ATSI web svc';
+const PRODUCT_AMOUNT = 500; // in centavos: ₱5.00
 const PRODUCT_CURRENCY = 'php';
 
 loadEnv(__DIR__ . '/../' . basename(getenv('ENV_FILE') ?: '.env')); // ENV_FILE=.env.live picks another file
@@ -101,7 +102,7 @@ function startQrph(FinFactory $finfactory): void
         'metadata' => ['product' => PRODUCT_NAME],
         'payment_method_data' => ['type' => 'qrph'],
         'confirm' => true,
-    ], ['idempotency_key' => 'acacia-qrph-' . $attempt]);
+    ], ['idempotency_key' => 'atsi-qrph-' . $attempt]);
 
     redirect('/qrph?payment_intent=' . urlencode($intent->id));
 }
@@ -117,9 +118,9 @@ function showQrph(FinFactory $finfactory): void
         return;
     }
 
-    // The SDK draws the code (it needs chillerlan/php-qrcode), with the QR Ph logo in the middle
-    // as the BSP asks of merchant codes. null when the intent isn't waiting for a QR Ph payment.
-    $svg = $intent->qrphSvg([
+    // finfactory-qrph draws the code, with the QR Ph logo in the middle as the BSP asks of
+    // merchant codes. null when the intent isn't waiting for a QR Ph payment.
+    $svg = QrPh::svg($intent, [
         'logo' => ['data' => (string) file_get_contents(__DIR__ . '/../assets/qrph-logo.png'), 'type' => 'image/png'],
         'margin' => 2,
     ]);

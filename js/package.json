@@ -31,10 +31,6 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./qrph": {
-      "types": "./dist/qrph.d.ts",
-      "default": "./dist/qrph.js"
-    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -56,16 +52,7 @@
     "test": "npm run build && node --test test/*.test.js",
     "prepublishOnly": "npm test"
   },
-  "peerDependencies": {
-    "qrcode-generator": "^2.0.4"
-  },
-  "peerDependenciesMeta": {
-    "qrcode-generator": {
-      "optional": true
-    }
-  },
   "devDependencies": {
-    "qrcode-generator": "^2.0.4",
     "typescript": "^7.0.2"
   }
 }

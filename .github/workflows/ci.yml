@@ -44,6 +44,43 @@ jobs:
       - run: composer update --no-interaction --no-progress --prefer-dist
       - run: vendor/bin/phpunit
 
+  qrph-js:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22, 24]
+    defaults:
+      run:
+        working-directory: qrph-js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm pack --dry-run
+
+  qrph-php:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4']
+    defaults:
+      run:
+        working-directory: qrph-php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: gd, mbstring # gd: the tests scan the codes they draw
+          coverage: none
+      - run: composer validate --strict
+      - run: composer update --no-interaction --no-progress --prefer-dist
+      - run: vendor/bin/phpunit
+
   spec-drift:
     # Fails when the published OpenAPI document no longer matches the snapshot the SDKs were built
     # from, so a new field, endpoint or event is noticed and added to both SDKs.

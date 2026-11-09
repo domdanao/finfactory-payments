@@ -76,7 +76,6 @@ header('Location: ' . $intent->redirectUrl(), true, 303); // hosted checkout
 - PHP 8.1 or later (tested in CI on 8.1, 8.2, 8.3 and 8.4)
 - `ext-curl` and `ext-json`
 - Optional: `ext-apcu`, to share Access Tokens between requests with `ApcuTokenCache`
-- Optional: `chillerlan/php-qrcode` 5, to [draw QR Ph codes](#drawing-the-qr-ph-code)
 
 ## Configuration
 
@@ -286,41 +285,25 @@ Create and confirm in one call with `'confirm' => true` and `payment_method_data
 
 ### Drawing the QR Ph code
 
-The SDK can draw the code for you as SVG, with the QR Ph logo in the middle. The BSP asks that
-merchant (P2M) QR Ph codes show the logo there ([QR Ph Rebranding FAQ](https://www.bsp.gov.ph/Media_And_Research/Primers%20Faqs/FAQs-QR-Ph-Rebranding.pdf), item 4).
-This needs one more package, which the rest of the SDK does not:
+The SDK gives you the payload (`$intent->qrphData()`). To draw it as a QR code with the QR Ph logo in
+the centre, as the BSP asks of merchant codes, use the separate package
+[`domdanao/finfactory-qrph`](https://github.com/domdanao/finfactory-payments/tree/main/qrph-php):
 
 ```sh
-composer require chillerlan/php-qrcode:^5
+composer require domdanao/finfactory-qrph
 ```
 
 ```php
-use FinFactory\Payments\QrPh;
+use FinFactory\QrPh\QrPh;
 
-$logo = ['data' => file_get_contents(__DIR__ . '/qrph-logo.png'), 'type' => 'image/png'];
-
-$svg = QrPh::svg($intent, ['logo' => $logo]); // null unless waiting for QR Ph; or $intent->qrphSvg([...])
-$expiresAt = $intent->qrphExpiresAt();        // Unix timestamp, for a countdown
-
-echo '<div style="width: 280px">' . $svg . '</div>';
+$svg = QrPh::svg($intent, ['logo' => $logo]); // null unless waiting for QR Ph
+$expiresAt = $intent->qrphExpiresAt();        // for a countdown
 ```
 
-The SDK does not include the logo: it is the BSP's mark, so get the image from your acquirer or
-the BSP. The modules under the logo are cleared and the code uses error correction level H, so
-banking apps read it past the logo. Without a logo, the code is drawn whole.
-
-| Option | Default | |
-| --- | --- | --- |
-| `logo` | none | A URL or `data:` URI, used as it is; or `['data' => bytes, 'type' => 'image/png']`, embedded |
-| `margin` | `4` | Light border around the code, in modules |
-| `foreground`, `background` | `#000`, `#fff` | Colours. Keep the code dark on light |
-| `title` | `QR Ph code` | Accessible name of the image |
-
-The SVG scales to its container; show it at 250px or more across. `QrPh::svg($payload, $options)` draws a payload
-you already have. While the code is showing, check the intent's status every few seconds (from
-your page, through your server) to move on once it is paid, and fulfil from the
-`payment_intent.succeeded` webhook. A runnable page is in
-[`sample-php`](https://github.com/domdanao/finfactory-payments/tree/main/sample-php).
+It is separate so the SDK keeps no dependencies, and so it can draw any QR Ph payload, from
+FinFactory or another provider, without the SDK. While the code is showing, check the intent's
+status every few seconds (from your page, through your server) to move on once it is paid, and
+fulfil from the `payment_intent.succeeded` webhook.
 
 ### Cash
 
@@ -738,7 +721,6 @@ $result = $finfactory->request('POST', '/v1/new_things', body: ['name' => 'x'], 
 | `testHelpers->paymentIntents->simulate($id, $params, $opts)` | `POST /v1/test_helpers/payment_intents/{id}/simulate` |
 | `accessTokens->create($opts)` | `POST /oauth/token` |
 | `Webhook::constructEvent / verify / isValid / generateTestHeader` | — |
-| `QrPh::svg($intentOrPayload, $options)`, `$intent->qrphSvg($options)` | — (draws locally) |
 
 Every parameter and field is described in the
 [Merchant API reference](https://docs.payments.finfactory.dev/merchant/reference/).

@@ -2,7 +2,7 @@
   "name": "acacia-15-svc-sample-js",
   "private": true,
   "version": "0.1.0",
-  "description": "A one-page site that charges ₱15 for Acacia 15 SVC through FinFactory hosted checkout.",
+  "description": "A one-page site that charges ₱5 for ATSI web svc by QR Ph on its own page, through the FinFactory API.",
   "type": "module",
   "scripts": {
     "start": "node --env-file=.env server.mjs",
@@ -12,6 +12,7 @@
     "node": ">=20.19"
   },
   "dependencies": {
-    "@domdanao/finfactory-payments": "file:../js"
+    "@domdanao/finfactory-payments": "file:../js",
+    "@domdanao/finfactory-qrph": "file:../qrph-js"
   }
 }

@@ -1,15 +1,16 @@
 /**
- * Draw a QR Ph code as SVG, for your own payment page.
+ * Draw a QR Ph code as SVG, with the QR Ph logo in the centre.
  *
- *   import { qrphSvg } from "@domdanao/finfactory-payments/qrph";
- *   const svg = qrphSvg(intent, { logo: "/img/qrph-logo.png" });
+ *   import { qrphSvg } from "@domdanao/finfactory-qrph";
+ *   const svg = qrphSvg(payload, { logo: "/img/qrph-logo.png" });
  *
- * A separate entry point, so the rest of the SDK keeps no dependencies: this one needs the
- * `qrcode-generator` package (`npm install qrcode-generator`).
+ * Works with any QR Ph payload: from FinFactory, or from any other provider that gives you the
+ * payload text. Needs no API key and makes no network calls, so it runs on a server or in a
+ * browser.
  */
 import qrcode from "qrcode-generator";
-import type { PaymentIntent } from "./types.js";
-import { qrphData } from "./helpers.js";
+
+export const VERSION = "0.1.0";
 
 /** An image for the middle of the code. */
 export type QrphLogo =
@@ -21,8 +22,8 @@ export type QrphLogo =
 export interface QrphSvgOptions {
   /**
    * The QR Ph logo, drawn in the middle. Merchant (P2M) QR Ph codes carry it there, per the BSP's
-   * QR Ph rebranding. The SDK doesn't ship the logo: it's the BSP's mark, not ours to license.
-   * Without one, the code is drawn whole.
+   * QR Ph rebranding. This package doesn't ship the logo: it's the BSP's mark, not ours to
+   * license. Without one, the code is drawn whole.
    */
   logo?: QrphLogo;
   /** Light border around the code, in modules. Default 4, what the QR standard asks for. */
@@ -36,20 +37,28 @@ export interface QrphSvgOptions {
 }
 
 /**
- * The QR Ph code as an `<svg>` element, ready to put in your page. Pass a payment intent (null is
- * returned when it isn't waiting for a QR Ph payment) or the QR payload itself.
+ * A FinFactory payment intent, or anything shaped like one: the payload is read from
+ * `next_action.qrph_display_qr_code.data`. No dependency on the FinFactory SDK.
+ */
+export interface QrphPaymentIntentLike {
+  next_action?: { type?: string; qrph_display_qr_code?: { data?: string | null } | null } | null;
+}
+
+/**
+ * The QR Ph code as an `<svg>` element, ready to put in your page. Pass the QR payload, or a
+ * FinFactory payment intent (null is returned when it isn't waiting for a QR Ph payment).
  *
  * The SVG scales to whatever size you give it; show it at 250px or more across. Error
  * correction is level H, so scanners read the code past the logo.
  */
-export function qrphSvg(source: PaymentIntent | string, options: QrphSvgOptions = {}): string | null {
-  const data = typeof source === "string" ? source : qrphData(source);
+export function qrphSvg(source: string | QrphPaymentIntentLike, options: QrphSvgOptions = {}): string | null {
+  const data = typeof source === "string" ? source : payloadOf(source);
   if (data === null) return null;
-  if (data === "") throw new TypeError("FinFactory: qrphSvg needs a QR payload; got an empty string.");
+  if (data === "") throw new TypeError("finfactory-qrph: qrphSvg needs a QR payload; got an empty string.");
 
   const margin = options.margin ?? 4;
   if (!Number.isInteger(margin) || margin < 0) {
-    throw new TypeError("FinFactory: qrphSvg's margin must be a whole number of modules, 0 or more.");
+    throw new TypeError("finfactory-qrph: qrphSvg's margin must be a whole number of modules, 0 or more.");
   }
 
   const qr = qrcode(0, "H");
@@ -98,16 +107,21 @@ export function logoModules(moduleCount: number): number {
   return side % 2 === 1 ? side : side - 1;
 }
 
+function payloadOf(intent: QrphPaymentIntentLike): string | null {
+  const action = intent?.next_action;
+  return action?.type === "qrph_display_qr_code" ? action.qrph_display_qr_code?.data ?? null : null;
+}
+
 function logoHref(logo: QrphLogo): string {
   if (typeof logo === "string") {
-    if (logo === "") throw new TypeError("FinFactory: qrphSvg's logo is an empty string.");
+    if (logo === "") throw new TypeError("finfactory-qrph: qrphSvg's logo is an empty string.");
     return logo;
   }
   const ok = logo && typeof logo === "object" && typeof logo.type === "string"
     && (logo.data instanceof Uint8Array || logo.data instanceof ArrayBuffer);
   const bytes = ok ? (logo.data instanceof Uint8Array ? logo.data : new Uint8Array(logo.data)) : null;
   if (bytes === null || bytes.length === 0) {
-    throw new TypeError('FinFactory: qrphSvg\'s logo must be a URL, a data: URI, or { data: bytes, type: "image/png" }.');
+    throw new TypeError('finfactory-qrph: qrphSvg\'s logo must be a URL, a data: URI, or { data: bytes, type: "image/png" }.');
   }
   let binary = "";
   for (let i = 0; i < bytes.length; i += 0x8000) {
