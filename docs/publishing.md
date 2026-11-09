@@ -70,6 +70,11 @@ By hand instead: `cd js && npm publish --access public` (with 2FA).
 First time only: create the mirror repository, run step 4 once, then submit its URL at
 <https://packagist.org/packages/submit>.
 
+The mirror already has a `v0.1.0` tag, pushed by hand for private use before any Packagist
+release. Step 4 can't push a tag that already exists, so the first Packagist release should be
+`php-v0.1.1` or later if `php/` has changed since then. If it hasn't changed, submit the mirror
+to Packagist without tagging.
+
 `.gitattributes` keeps `tests/`, `examples/` and tooling out of the archive Composer downloads.
 
 ## After a release
